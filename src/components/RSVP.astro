@@ -126,6 +126,8 @@
                 : 'bg-amber-500/10 text-amber-400 border-amber-500/20';
 
             const timeVal = wish.created_at ? new Date(wish.created_at).getTime() : Date.now();
+            // Determine if this wish has already been liked by this browser
+            const liked = localStorage.getItem(`liked_${wish.id}`) === 'true';
 
             return `
                 <div class="bg-stone-900/80 p-4 rounded-xl border border-stone-800 flex flex-col justify-between">
@@ -138,39 +140,62 @@
                     </div>
                     <div class="flex items-center justify-between mt-3 pt-2 border-t border-stone-800/40">
                         <span class="text-[10px] text-stone-500">${getRelativeTime(timeVal)}</span>
-                        <button class="like-btn flex items-center gap-1.5 text-stone-400 hover:text-rose-500 text-xs font-cinzel transition cursor-pointer" data-id="${wish.id}">
-                            <i class="fa-solid fa-heart text-[10px] text-stone-500 hover:text-rose-500 transition-colors"></i>
+                        <button class="like-btn flex items-center gap-1.5 ${liked ? 'text-rose-500' : 'text-stone-400'} hover:text-rose-500 text-xs font-cinzel transition cursor-pointer" data-id="${wish.id}" data-liked="${liked}">
+                            <i class="fa-solid fa-heart text-[10px] ${liked ? 'text-rose-500' : 'text-stone-500'} hover:text-rose-500 transition-colors"></i>
                             <span>${wish.likes || 0}</span>
                         </button>
                     </div>
                 </div>
-            `;
-        }).join('');
+            `;        }).join('');
 
         // Attach heart reaction event listeners
         document.querySelectorAll('.like-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const id = btn.getAttribute('data-id');
                 if (!id) return;
-
-                // Optimistic UI updates
                 const span = btn.querySelector('span');
-                if (span) {
-                    span.innerText = String((Number(span.innerText) || 0) + 1);
-                }
-
-                try {
-                    const res = await fetch('/api/like', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ id })
-                    });
-                    if (res.ok) {
-                        triggerToast("Ucapan disukai!");
-                        fetchWishes(); // reload to keep in sync
+                if (!span) return;
+                const alreadyLiked = localStorage.getItem(`liked_${id}`) === 'true';
+                if (alreadyLiked) {
+                    // Unlike flow
+                    const newCount = Math.max(0, Number(span.innerText) - 1);
+                    span.innerText = String(newCount);
+                    localStorage.removeItem(`liked_${id}`);
+                    btn.classList.remove('text-rose-500');
+                    btn.classList.add('text-stone-400');
+                    try {
+                        const res = await fetch('/api/like', {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id })
+                        });
+                        if (res.ok) {
+                            triggerToast("Ucapan tidak disukai");
+                            fetchWishes();
+                        }
+                    } catch (e) {
+                        console.error('Failed to unlike', e);
                     }
-                } catch (e) {
-                    console.error("Failed to send like", e);
+                } else {
+                    // Like flow
+                    const newCount = (Number(span.innerText) || 0) + 1;
+                    span.innerText = String(newCount);
+                    localStorage.setItem(`liked_${id}`, 'true');
+                    btn.classList.remove('text-stone-400');
+                    btn.classList.add('text-rose-500');
+                    try {
+                        const res = await fetch('/api/like', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id })
+                        });
+                        if (res.ok) {
+                            triggerToast("Ucapan disukai!");
+                            fetchWishes();
+                        }
+                    } catch (e) {
+                        console.error('Failed to like', e);
+                    }
                 }
             });
         });
@@ -178,6 +203,15 @@
 
     // Initialize wishes wall by fetching from server API
     fetchWishes();
+    // Prefill name from URL query parameter ?to=
+    const urlParams = new URLSearchParams(window.location.search);
+    const toParam = urlParams.get('to');
+    if (toParam) {
+        const nameInput = document.getElementById('rsvp-name') as HTMLInputElement;
+        if (nameInput) {
+            nameInput.value = toParam;
+        }
+    }
 
     const form = document.getElementById('rsvp-form') as HTMLFormElement;
     form?.addEventListener('submit', async (e) => {
@@ -207,15 +241,22 @@
             if (res.ok) {
                 fetchWishes(); // refresh local comments feed
                 
-                // Configure WhatsApp Button
-                const weddingPhoneNumber = "62895395272714"; // Wira's WhatsApp
-                const waMessage = `Halo Wira & Ayu, saya *${wishData.name}* ingin mengonfirmasi kehadiran di acara pernikahan Anda.\n\n*Konfirmasi Kehadiran:* ${wishData.status}\n*Jumlah Tamu:* ${wishData.guests}\n\n*Ucapan & Doa:* \n"${wishData.message}"`;
-                const waUrl = `https://api.whatsapp.com/send?phone=${weddingPhoneNumber}&text=${encodeURIComponent(waMessage)}`;
-
-                const waBtn = document.getElementById('rsvp-wa-btn');
-                if (waBtn) {
-                    waBtn.setAttribute('href', waUrl);
-                    waBtn.classList.remove('hidden');
+                // Configure WhatsApp Button based on admin settings
+                const whatsappEnabled = localStorage.getItem('whatsappEnabled') !== 'false';
+                const weddingPhoneNumber = localStorage.getItem('whatsappNumber') || "6287850112205"; // default fallback
+                if (whatsappEnabled) {
+                    const waMessage = `Halo Wira & Ayu, saya *${wishData.name}* ingin mengonfirmasi kehadiran di acara pernikahan Anda.\n\n*Konfirmasi Kehadiran:* ${wishData.status}\n*Jumlah Tamu:* ${wishData.guests}\n\n*Ucapan & Doa:* \n"${wishData.message}"`;
+                    const waUrl = `https://api.whatsapp.com/send?phone=${weddingPhoneNumber}&text=${encodeURIComponent(waMessage)}`;
+                    const waBtn = document.getElementById('rsvp-wa-btn');
+                    if (waBtn) {
+                        waBtn.setAttribute('href', waUrl);
+                        waBtn.classList.remove('hidden');
+                    }
+                } else {
+                    const waBtn = document.getElementById('rsvp-wa-btn');
+                    if (waBtn) {
+                        waBtn.classList.add('hidden');
+                    }
                 }
 
                 form.reset();

@@ -17,9 +17,17 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // Upsert key settings at id = 1
+    const parsedSettings = {
+      ...settingsData,
+      // Ensure boolean for whatsapp_enabled; treat missing as false
+      whatsapp_enabled:
+        settingsData.whatsapp_enabled !== undefined
+          ? (settingsData.whatsapp_enabled === 'true' || settingsData.whatsapp_enabled === '1')
+          : false,
+    };
     const { data, error } = await supabase
       .from('settings')
-      .upsert({ id: 1, ...settingsData })
+      .upsert({ id: 1, ...parsedSettings })
       .select();
 
     if (error) {

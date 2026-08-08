@@ -45,7 +45,9 @@ const defaultSettings = {
     groom_bank_holder: 'Syafri Wira Wicaksana',
     bride_bank_name: 'Bank BCA',
     bride_bank_number: '0987654321',
-    bride_bank_holder: 'Barqhadini Ayuningsih'
+    bride_bank_holder: 'Barqhadini Ayuningsih',
+    whatsapp_enabled: true,
+    whatsapp_number: ''
 };
 
 let activeSettings = defaultSettings;
@@ -203,7 +205,7 @@ function parseUtcIsoToLocal(utcIso: string) {
                 <div class="flex flex-col md:flex-row items-center justify-between border-b border-stone-800 pb-6 gap-4">
                     <div class="text-center md:text-left">
                         <h1 class="font-script text-4xl text-gold-light">{activeSettings.groom_name_short} & {activeSettings.bride_name_short}</h1>
-                        <p class="font-cinzel text-[10px] text-stone-500 uppercase tracking-widest mt-1">Guest Book Moderator Panel</p>
+                        <p class="font-cinzel text-[10px] text-stone-300 uppercase tracking-widest mt-1">Guest Book Moderator Panel</p>
                     </div>
                     <form method="GET" class="text-right">
                         <a href="/admin" class="font-cinzel text-[10px] uppercase tracking-wider text-stone-400 hover:text-gold border border-stone-800 hover:border-gold px-4 py-2 rounded-lg transition">
@@ -227,16 +229,16 @@ function parseUtcIsoToLocal(utcIso: string) {
                     {/* Dashboard Stats */}
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
                         <div class="bg-stone-900 border border-stone-800 rounded-xl p-5 shadow-xl text-center">
-                            <span class="text-stone-500 font-cinzel text-[10px] uppercase tracking-wider block mb-1">Total Ucapan</span>
+                            <span class="text-stone-300 font-cinzel text-[10px] uppercase tracking-wider block mb-1">Total Ucapan</span>
                             <span class="text-3xl font-bold text-gold font-mono">{totalWishes}</span>
                         </div>
                         <div class="bg-stone-900 border border-stone-800 rounded-xl p-5 shadow-xl text-center">
-                            <span class="text-stone-500 font-cinzel text-[10px] uppercase tracking-wider block mb-1">Konfirmasi Hadir</span>
-                            <span class="text-3xl font-bold text-emerald-400 font-mono">{attendingCount} <span class="text-xs text-stone-500 font-normal">Undangan</span></span>
+                            <span class="text-stone-300 font-cinzel text-[10px] uppercase tracking-wider block mb-1">Konfirmasi Hadir</span>
+                            <span class="text-3xl font-bold text-emerald-400 font-mono">{attendingCount} <span class="text-xs text-stone-300 font-normal">Undangan</span></span>
                         </div>
                         <div class="bg-stone-900 border border-stone-800 rounded-xl p-5 shadow-xl text-center">
-                            <span class="text-stone-500 font-cinzel text-[10px] uppercase tracking-wider block mb-1">Total Estimasi Tamu</span>
-                            <span class="text-3xl font-bold text-gold-light font-mono">{totalGuests} <span class="text-xs text-stone-500 font-normal">Orang</span></span>
+                            <span class="text-stone-300 font-cinzel text-[10px] uppercase tracking-wider block mb-1">Total Estimasi Tamu</span>
+                            <span class="text-3xl font-bold text-gold-light font-mono">{totalGuests} <span class="text-xs text-stone-300 font-normal">Orang</span></span>
                         </div>
                     </div>
 
@@ -249,7 +251,7 @@ function parseUtcIsoToLocal(utcIso: string) {
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse">
                                 <thead>
-                                    <tr class="border-b border-stone-800 text-[10px] uppercase font-cinzel text-stone-500 tracking-wider bg-stone-950/40">
+                                    <tr class="border-b border-stone-800 text-[10px] uppercase font-cinzel text-stone-300 tracking-wider bg-stone-950/40">
                                         <th class="py-3 px-6">Nama Pengirim</th>
                                         <th class="py-3 px-6 text-center">Kehadiran</th>
                                         <th class="py-3 px-6 text-center">Tamu</th>
@@ -557,7 +559,16 @@ function parseUtcIsoToLocal(utcIso: string) {
                         </div>
 
                         <div class="pt-6 border-t border-stone-800/80">
-                            <button type="submit" class="w-full md:w-auto px-8 py-3.5 font-cinzel text-xs uppercase tracking-widest text-stone-950 font-bold rounded-lg bg-gradient-to-r from-gold-light via-gold to-gold-dark shadow-lg hover:opacity-95 transition cursor-pointer">
+                            <div>
+                                {/* WhatsApp enable toggle */}
+                                <div class="flex items-center space-x-2 mb-2">
+                                    <input type="checkbox" id="whatsapp_enabled" name="whatsapp_enabled" class="accent-gold" value="true" checked={activeSettings.whatsapp_enabled} />
+                                    <label for="whatsapp_enabled" class="text-stone-200 text-xs">Aktifkan kirim via WhatsApp</label>
+                                </div>
+                                <label class="block text-stone-500 text-[10px] uppercase tracking-wider mb-1">Nomor WhatsApp (untuk konfirmasi/chat)</label>
+                                <input type="text" name="whatsapp_number" value={activeSettings.whatsapp_number} class="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 text-xs focus:outline-none focus:border-gold" placeholder="Contoh: 628123456789" />
+                            </div>
+                            <button type="submit" class="mt-6 w-full md:w-auto px-8 py-3.5 font-cinzel text-xs uppercase tracking-widest text-stone-950 font-bold rounded-lg bg-gradient-to-r from-gold-light via-gold to-gold-dark shadow-lg hover:opacity-95 transition cursor-pointer">
                                 Simpan Pengaturan Undangan
                             </button>
                         </div>
