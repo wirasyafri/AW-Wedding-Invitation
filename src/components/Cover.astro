@@ -46,6 +46,11 @@
         const musicToggle = document.getElementById('music-toggle');
         const audio = document.getElementById('bg-music') as HTMLAudioElement;
 
+        // Play audio synchronously on click to satisfy mobile browser user-interaction policies
+        if (audio) {
+            audio.play().catch(e => console.log("Audio autoplay restricted", e));
+        }
+
         if (cover) {
             cover.style.opacity = '0';
             setTimeout(() => {
@@ -55,9 +60,6 @@
                 }
                 if (musicToggle) {
                     musicToggle.classList.remove('hidden');
-                }
-                if (audio) {
-                    audio.play().catch(e => console.log("Audio autoplay restricted", e));
                 }
             }, 1000);
         }
