@@ -24,6 +24,14 @@ export const POST: APIRoute = async ({ request }) => {
         settingsData.whatsapp_enabled !== undefined
           ? (settingsData.whatsapp_enabled === 'true' || settingsData.whatsapp_enabled === '1')
           : false,
+      camera_allow_change_guest:
+        settingsData.camera_allow_change_guest !== undefined
+          ? (settingsData.camera_allow_change_guest === 'true' || settingsData.camera_allow_change_guest === '1')
+          : false,
+      camera_photo_limit:
+        settingsData.camera_photo_limit !== undefined
+          ? parseInt(settingsData.camera_photo_limit) || 15
+          : 15,
     };
     const { data, error } = await supabase
       .from('settings')

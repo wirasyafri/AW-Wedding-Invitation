@@ -1,10 +1,11 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase.server';
 
 // Session variables
 let authenticated = false;
 let wishes: any[] = [];
+let cameraPhotos: any[] = [];
 let errorMessage = '';
 let passwordVal = '';
 
@@ -45,9 +46,10 @@ const defaultSettings = {
     groom_bank_holder: 'Syafri Wira Wicaksana',
     bride_bank_name: 'Bank BCA',
     bride_bank_number: '0987654321',
-    bride_bank_holder: 'Barqhadini Ayuningsih',
     whatsapp_enabled: true,
-    whatsapp_number: ''
+    whatsapp_number: '',
+    camera_allow_change_guest: true,
+    camera_photo_limit: 15
 };
 
 let activeSettings = defaultSettings;
@@ -112,6 +114,19 @@ if (Astro.request.method === 'POST') {
             if (dbSettings) {
                 activeSettings = { ...defaultSettings, ...dbSettings };
             }
+
+            // Fetch camera photos
+            try {
+                const { data: dbPhotos } = await supabase
+                    .from('camera_photos')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                if (dbPhotos) {
+                    cameraPhotos = dbPhotos;
+                }
+            } catch (err) {
+                console.error("Gagal memuat camera_photos:", err);
+            }
         } else {
             errorMessage = 'Password yang Anda masukkan salah!';
         }
@@ -128,6 +143,16 @@ const totalGuests = wishes.reduce((sum, w) => {
     const num = parseInt(w.guests) || 1;
     return sum + num;
 }, 0);
+
+// Group camera photos by guest name
+const photosByGuest = cameraPhotos.reduce((groups: Record<string, any[]>, photo) => {
+    const guest = photo.guest_id || 'Tamu Tanpa Nama';
+    if (!groups[guest]) {
+        groups[guest] = [];
+    }
+    groups[guest].push(photo);
+    return groups;
+}, {});
 
 // Helper to format ISO target date to YYYY-MM-DDTHH:MM local format for input
 function formatToLocalDatetime(isoString: string) {
@@ -221,6 +246,9 @@ function parseUtcIsoToLocal(utcIso: string) {
                     </button>
                     <button id="tab-settings" class="px-5 py-2.5 border-b-2 border-transparent text-stone-400 font-cinzel font-bold tracking-wider uppercase hover:text-stone-200 cursor-pointer transition">
                         Pengaturan Undangan
+                    </button>
+                    <button id="tab-camera" class="px-5 py-2.5 border-b-2 border-transparent text-stone-400 font-cinzel font-bold tracking-wider uppercase hover:text-stone-200 cursor-pointer transition">
+                        Disposable Camera
                     </button>
                 </div>
 
@@ -558,7 +586,7 @@ function parseUtcIsoToLocal(utcIso: string) {
                             </div>
                         </div>
 
-                        <div class="pt-6 border-t border-stone-800/80">
+                        <div class="pt-6 border-t border-stone-800/80 space-y-6">
                             <div>
                                 {/* WhatsApp enable toggle */}
                                 <div class="flex items-center space-x-2 mb-2">
@@ -568,11 +596,91 @@ function parseUtcIsoToLocal(utcIso: string) {
                                 <label class="block text-stone-500 text-[10px] uppercase tracking-wider mb-1">Nomor WhatsApp (untuk konfirmasi/chat)</label>
                                 <input type="text" name="whatsapp_number" value={activeSettings.whatsapp_number} class="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 text-xs focus:outline-none focus:border-gold" placeholder="Contoh: 628123456789" />
                             </div>
+
+                            {/* Disposable Camera Settings */}
+                            <div class="pt-6 border-t border-stone-800/40">
+                                <h3 class="font-cinzel text-[10px] text-gold uppercase tracking-wider mb-4 font-bold">Pengaturan Kamera Disposable</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <div class="flex items-center space-x-2 mb-2">
+                                            <input type="checkbox" id="camera_allow_change_guest" name="camera_allow_change_guest" class="accent-gold" value="true" checked={activeSettings.camera_allow_change_guest} />
+                                            <label for="camera_allow_change_guest" class="text-stone-200 text-xs">Izinkan Berganti Akun ("Ganti Tamu")</label>
+                                        </div>
+                                        <p class="text-stone-500 text-[10px]">Jika dimatikan, tombol "Ganti Tamu" di halaman kamera akan disembunyikan untuk mencegah tamu berganti akun.</p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-stone-500 text-[10px] uppercase tracking-wider mb-1">Batas Maksimal Foto per Tamu</label>
+                                        <input type="number" name="camera_photo_limit" min="1" max="100" value={activeSettings.camera_photo_limit} class="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 text-xs focus:outline-none focus:border-gold" />
+                                        <p class="text-stone-500 text-[10px] mt-1">Batas jumlah jepretan foto kamera disposable per tamu (Default: 15).</p>
+                                    </div>
+                                </div>
+                            </div>
+
                             <button type="submit" class="mt-6 w-full md:w-auto px-8 py-3.5 font-cinzel text-xs uppercase tracking-widest text-stone-950 font-bold rounded-lg bg-gradient-to-r from-gold-light via-gold to-gold-dark shadow-lg hover:opacity-95 transition cursor-pointer">
                                 Simpan Pengaturan Undangan
                             </button>
                         </div>
                     </form>
+                </div>
+
+                {/* TAB 3: DISPOSABLE CAMERA PHOTOS */}
+                <div id="view-camera" class="hidden space-y-8">
+                    <div class="bg-stone-900 border border-stone-800 rounded-xl p-6 shadow-2xl text-left">
+                        <div class="border-b border-stone-800 pb-4 mb-6 flex justify-between items-center">
+                            <div>
+                                <h2 class="font-cinzel text-xs text-gold uppercase tracking-wider">Disposable Camera - Foto Tamu</h2>
+                                <p class="text-stone-400 text-[11px] mt-1">Daftar foto yang diambil oleh tamu melalui fitur kamera sekali pakai.</p>
+                            </div>
+                            <button id="refresh-camera-btn" class="px-4 py-2 bg-stone-950 hover:bg-stone-800 border border-stone-800 hover:border-gold font-cinzel text-[10px] text-stone-300 hover:text-gold rounded-lg uppercase tracking-wider transition cursor-pointer flex items-center gap-1.5 shadow-sm">
+                                <i class="fa-solid fa-arrows-rotate"></i> Perbarui
+                            </button>
+                        </div>
+
+                        <div id="camera-photos-container">
+                            {Object.keys(photosByGuest).length === 0 ? (
+                                <div class="py-12 text-center text-stone-500 font-cinzel">
+                                    Belum ada foto yang diambil oleh tamu.
+                                </div>
+                            ) : (
+                                <div class="space-y-8">
+                                    {Object.entries(photosByGuest).map(([guestName, photos]: [string, any]) => (
+                                        <div class="border border-stone-800/60 bg-stone-950/40 rounded-xl p-5 space-y-4">
+                                            <div class="flex items-center justify-between border-b border-stone-800 pb-2">
+                                                <div class="flex items-center gap-2">
+                                                    <div class="w-2 h-2 rounded-full bg-gold"></div>
+                                                    <h3 class="font-cinzel text-sm text-stone-200 font-bold tracking-wide">{guestName}</h3>
+                                                </div>
+                                                <span class="text-[10px] text-stone-500 font-mono">{photos.length} Foto</span>
+                                            </div>
+
+                                            <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
+                                                {photos.map((photo: any) => (
+                                                    <div class="group relative aspect-square bg-stone-900 border border-stone-800 rounded-lg overflow-hidden shadow-lg hover:scale-[1.03] transition-all" data-photo-card-id={photo.id}>
+                                                        <img src={photo.url} class="w-full h-full object-cover" alt={`Foto dari ${guestName}`} loading="lazy" />
+                                                        <a 
+                                                            href={photo.url} 
+                                                            target="_blank" 
+                                                            rel="noopener noreferrer" 
+                                                            class="absolute inset-0 bg-stone-950/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-stone-200 text-xs font-cinzel uppercase tracking-wider transition-opacity duration-200"
+                                                        >
+                                                            Buka Foto
+                                                        </a>
+                                                        <button 
+                                                            class="admin-photo-delete-btn absolute top-2 right-2 z-20 w-7 h-7 bg-red-950/80 hover:bg-red-600 border border-red-900/40 text-red-400 hover:text-white rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md opacity-0 group-hover:opacity-100"
+                                                            data-photo-id={photo.id}
+                                                            title="Hapus Foto Secara Permanen"
+                                                        >
+                                                            <i class="fa-solid fa-trash-can text-[10px]"></i>
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
 
                 {/* Master Action Form */}
@@ -599,27 +707,28 @@ function parseUtcIsoToLocal(utcIso: string) {
     // Tab toggle logic
     const btnWishes = document.getElementById('tab-wishes');
     const btnSettings = document.getElementById('tab-settings');
+    const btnCamera = document.getElementById('tab-camera');
     const viewWishes = document.getElementById('view-wishes');
     const viewSettings = document.getElementById('view-settings');
+    const viewCamera = document.getElementById('view-camera');
 
-    btnWishes?.addEventListener('click', () => {
-        btnWishes.classList.add('border-gold', 'text-gold');
-        btnWishes.classList.remove('border-transparent', 'text-stone-400');
-        btnSettings?.classList.remove('border-gold', 'text-gold');
-        btnSettings?.classList.add('border-transparent', 'text-stone-400');
+    const tabs = [
+        { btn: btnWishes, view: viewWishes },
+        { btn: btnSettings, view: viewSettings },
+        { btn: btnCamera, view: viewCamera }
+    ];
 
-        viewWishes?.classList.remove('hidden');
-        viewSettings?.classList.add('hidden');
-    });
-
-    btnSettings?.addEventListener('click', () => {
-        btnSettings.classList.add('border-gold', 'text-gold');
-        btnSettings.classList.remove('border-transparent', 'text-stone-400');
-        btnWishes?.classList.remove('border-gold', 'text-gold');
-        btnWishes?.classList.add('border-transparent', 'text-stone-400');
-
-        viewSettings?.classList.remove('hidden');
-        viewWishes?.classList.add('hidden');
+    tabs.forEach(tab => {
+        tab.btn?.addEventListener('click', () => {
+            tabs.forEach(t => {
+                t.btn?.classList.remove('border-gold', 'text-gold');
+                t.btn?.classList.add('border-transparent', 'text-stone-400');
+                t.view?.classList.add('hidden');
+            });
+            tab.btn.classList.add('border-gold', 'text-gold');
+            tab.btn.classList.remove('border-transparent', 'text-stone-400');
+            tab.view?.classList.remove('hidden');
+        });
     });
 
     // Client-side helper function to submit moderation actions
@@ -849,5 +958,143 @@ function parseUtcIsoToLocal(utcIso: string) {
                 console.warn('showPicker not supported on this browser:', err);
             }
         });
+    });
+
+    // Client-side dynamic refresh for disposable camera photos
+    const refreshCameraBtn = document.getElementById('refresh-camera-btn');
+    const cameraPhotosContainer = document.getElementById('camera-photos-container');
+
+    refreshCameraBtn?.addEventListener('click', async () => {
+        const originalText = refreshCameraBtn.innerHTML;
+        refreshCameraBtn.disabled = true;
+        refreshCameraBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memuat...';
+
+        try {
+            const masterPass = document.getElementsByName('password')[0]?.value || '';
+            const res = await fetch(`/api/camera?adminPass=${encodeURIComponent(masterPass)}`);
+            if (res.ok) {
+                const photos = await res.json();
+                
+                // Group photos by guest
+                const groups = {};
+                photos.forEach(photo => {
+                    const guest = photo.guest_id || 'Tamu Tanpa Nama';
+                    if (!groups[guest]) {
+                        groups[guest] = [];
+                    }
+                    groups[guest].push(photo);
+                });
+
+                if (Object.keys(groups).length === 0) {
+                    cameraPhotosContainer.innerHTML = `
+                        <div class="py-12 text-center text-stone-500 font-cinzel">
+                            Belum ada foto yang diambil oleh tamu.
+                        </div>
+                    `;
+                } else {
+                    let html = '<div class="space-y-8">';
+                    Object.entries(groups).forEach(([guestName, guestPhotos]) => {
+                        html += `
+                            <div class="border border-stone-800/60 bg-stone-950/40 rounded-xl p-5 space-y-4">
+                                <div class="flex items-center justify-between border-b border-stone-800 pb-2">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-2 h-2 rounded-full bg-gold"></div>
+                                        <h3 class="font-cinzel text-sm text-stone-200 font-bold tracking-wide">${guestName}</h3>
+                                    </div>
+                                    <span class="text-[10px] text-stone-500 font-mono">${guestPhotos.length} Foto</span>
+                                </div>
+                                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
+                        `;
+                        guestPhotos.forEach(photo => {
+                            html += `
+                                    <div class="group relative aspect-square bg-stone-900 border border-stone-800 rounded-lg overflow-hidden shadow-lg hover:scale-[1.03] transition-all" data-photo-card-id="${photo.id}">
+                                        <img src="${photo.url}" class="w-full h-full object-cover" alt="Foto dari ${guestName}" loading="lazy" />
+                                        <a 
+                                            href="${photo.url}" 
+                                            target="_blank" 
+                                            rel="noopener noreferrer" 
+                                            class="absolute inset-0 bg-stone-950/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-stone-200 text-xs font-cinzel uppercase tracking-wider transition-opacity duration-200"
+                                        >
+                                            Buka Foto
+                                        </a>
+                                        <button 
+                                            class="admin-photo-delete-btn absolute top-2 right-2 z-20 w-7 h-7 bg-red-950/80 hover:bg-red-650 border border-red-900/40 text-red-400 hover:text-white rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md opacity-0 group-hover:opacity-100"
+                                            data-photo-id="${photo.id}"
+                                            title="Hapus Foto Secara Permanen"
+                                        >
+                                            <i class="fa-solid fa-trash-can text-[10px]"></i>
+                                        </button>
+                                    </div>
+                            `;
+                        });
+                        html += `
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                    cameraPhotosContainer.innerHTML = html;
+                }
+                
+                triggerAdminToast("Daftar foto berhasil diperbarui!");
+            } else {
+                const err = await res.json();
+                alert("Gagal memperbarui: " + (err.error || "Kesalahan server"));
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Kesalahan koneksi saat memperbarui foto.");
+        } finally {
+            refreshCameraBtn.disabled = false;
+            refreshCameraBtn.innerHTML = originalText;
+        }
+    });
+
+    // Delete photo click listener delegation
+    document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.admin-photo-delete-btn');
+        if (!btn) return;
+        
+        const photoId = btn.getAttribute('data-photo-id');
+        if (!photoId) return;
+
+        if (!confirm('Hapus foto ini secara permanen dari server database dan storage?')) {
+            return;
+        }
+
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-[9px]"></i>';
+
+        try {
+            const masterPass = document.getElementsByName('password')[0]?.value || '';
+            const res = await fetch(`/api/camera?id=${photoId}&adminPass=${encodeURIComponent(masterPass)}`, {
+                method: 'DELETE'
+            });
+
+            if (res.ok) {
+                const card = document.querySelector(`[data-photo-card-id="${photoId}"]`);
+                if (card) {
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.8)';
+                    setTimeout(() => {
+                        card.remove();
+                        // Refresh container to regroup and recount photos
+                        refreshCameraBtn?.click();
+                    }, 300);
+                }
+                triggerAdminToast("Foto berhasil dihapus secara permanen!");
+            } else {
+                const err = await res.json();
+                alert("Gagal menghapus: " + (err.error || "Kesalahan server"));
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Kesalahan koneksi saat menghapus foto.");
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
     });
 </script>

@@ -1,0 +1,483 @@
+---
+// src/pages/camera.astro
+import Layout from '../layouts/Layout.astro';
+import { supabase } from '../lib/supabase.server';
+
+// Fetch active camera settings
+const defaultSettings = {
+  camera_allow_change_guest: true,
+  camera_photo_limit: 15
+};
+
+let activeSettings = defaultSettings;
+try {
+  const { data: dbSettings } = await supabase
+    .from('settings')
+    .select('camera_allow_change_guest, camera_photo_limit')
+    .eq('id', 1)
+    .single();
+  if (dbSettings) {
+    activeSettings = { ...defaultSettings, ...dbSettings };
+  }
+} catch (e) {
+  console.error("Gagal memuat setting kamera:", e);
+}
+---
+
+<Layout title="Disposable Camera - Wira & Ayu" description="Capture your best moments at the wedding of Wira & Ayu.">
+  <div class="min-h-screen bg-stone-950 text-stone-100 flex flex-col justify-between py-8 px-4 font-sans select-none">
+    
+    <header class="text-center max-w-md mx-auto w-full mb-4">
+      <h1 class="font-cinzel text-2xl text-gold uppercase tracking-widest font-bold">Wedding Camera</h1>
+      <p class="font-script text-xl text-gold-light mt-1">Wira & Ayu</p>
+    </header>
+
+    <main class="flex-grow flex flex-col items-center justify-center max-w-md mx-auto w-full">
+      <!-- Section 1: Guest Login / Name Input -->
+      <section id="name-section" class="w-full bg-stone-900/80 border border-stone-800/80 rounded-2xl p-6 shadow-2xl backdrop-blur-md text-center" style="display: none;">
+        <div class="w-16 h-16 bg-gold/10 border border-gold/30 rounded-full flex items-center justify-center text-gold mx-auto mb-4 text-xl">
+          <i class="fa-solid fa-camera"></i>
+        </div>
+        <h2 class="font-cinzel text-lg text-gold mb-1 uppercase tracking-wider font-bold">Disposable Camera</h2>
+        <p class="text-stone-400 text-xs mb-6">Abadikan momen indah pernikahan kami langsung dari kamera ponsel Anda. Setiap tamu memiliki batas 15 foto.</p>
+        
+        <form id="guest-name-form" class="space-y-4">
+          <div>
+            <label for="guest-name" class="block text-left text-[10px] uppercase tracking-wider text-stone-500 mb-1">Nama Anda (Sesuai Undangan)</label>
+            <input 
+              type="text" 
+              id="guest-name" 
+              required 
+              placeholder="Masukkan nama lengkap" 
+              class="w-full bg-stone-950 border border-stone-800 rounded-lg px-4 py-3 text-center text-stone-100 placeholder-stone-600 focus:outline-none focus:border-gold transition text-sm"
+            />
+          </div>
+          <button type="submit" class="w-full py-3.5 font-cinzel text-xs uppercase tracking-widest text-stone-950 font-bold rounded-lg bg-gradient-to-r from-gold-light via-gold to-gold-dark shadow-lg hover:opacity-95 transition cursor-pointer">
+            Mulai Memotret
+          </button>
+        </form>
+      </section>
+
+      <!-- Section 2: Camera View Finder & Capture Controls -->
+      <section id="camera-section" class="w-full space-y-6" style="display: none;" data-limit={activeSettings.camera_photo_limit} data-allow-change={activeSettings.camera_allow_change_guest ? "true" : "false"}>
+        
+        <!-- Retro Camera Body Mockup -->
+        <div class="w-full bg-stone-900 border border-stone-850 rounded-[2.5rem] shadow-2xl overflow-hidden relative border-t-8 border-t-stone-400">
+          
+          <!-- Camera Brand / Header -->
+          <div class="px-6 py-3 flex justify-between items-center bg-stone-950/40 border-b border-stone-800/60">
+            <span class="font-cinzel text-[10px] text-stone-500 tracking-widest font-bold">WEDDING CAM 400</span>
+            <div class="flex items-center gap-2">
+              <div id="status-led" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_#10b981]"></div>
+              <span class="text-[9px] font-mono text-stone-400 uppercase tracking-wider">Ready</span>
+            </div>
+          </div>
+
+          <!-- Viewfinder Frame -->
+          <div class="p-4 bg-stone-900">
+            <div class="relative aspect-[4/3] rounded-2xl overflow-hidden bg-black shadow-inner border border-stone-950">
+              <!-- Video Element -->
+              <video id="video-stream" autoplay playsinline class="w-full h-full object-cover scale-x-[-1]"></video>
+              
+              <!-- Crosshair Overlay -->
+              <div class="absolute inset-0 border border-white/10 pointer-events-none flex items-center justify-center">
+                <div class="w-8 h-px bg-white/20"></div>
+                <div class="h-8 w-px bg-white/20"></div>
+                
+                <div class="absolute top-4 left-4 w-4 h-4 border-t border-l border-white/20"></div>
+                <div class="absolute top-4 right-4 w-4 h-4 border-t border-r border-white/20"></div>
+                <div class="absolute bottom-4 left-4 w-4 h-4 border-b border-l border-white/20"></div>
+                <div class="absolute bottom-4 right-4 w-4 h-4 border-b border-r border-white/20"></div>
+              </div>
+
+              <!-- Shutter Flash Overlay -->
+              <div id="shutter-flash" class="absolute inset-0 bg-white opacity-0 pointer-events-none transition-opacity duration-100 z-10"></div>
+
+              <!-- Countdown Display Overlay -->
+              <div id="countdown-overlay" class="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 pointer-events-none transition-opacity z-20">
+                <span id="countdown-number" class="text-6xl font-cinzel font-bold text-gold animate-bounce">3</span>
+              </div>
+
+              <!-- Shutter Loading Spinner -->
+              <div id="shutter-loading" class="absolute inset-0 flex flex-col items-center justify-center bg-black/80 opacity-0 pointer-events-none transition-opacity z-20">
+                <i class="fa-solid fa-spinner fa-spin text-3xl text-gold mb-2"></i>
+                <span class="text-[10px] font-cinzel tracking-widest text-stone-300 uppercase">Menyimpan Foto...</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Camera Controls Grid -->
+          <div class="px-6 pb-6 bg-stone-900 grid grid-cols-3 items-center gap-4">
+            <!-- Left Control: Flip & Timer -->
+            <div class="flex flex-col gap-3 justify-center items-start">
+              <button id="btn-flip" class="w-10 h-10 rounded-full bg-stone-950 hover:bg-stone-800 text-stone-300 flex items-center justify-center border border-stone-800 transition active:scale-95 shadow-md cursor-pointer" title="Balik Kamera">
+                <i class="fa-solid fa-camera-rotate text-sm"></i>
+              </button>
+              <button id="btn-timer" class="w-10 h-10 rounded-full bg-stone-950 hover:bg-stone-800 text-stone-300 flex flex-col items-center justify-center border border-stone-800 transition active:scale-95 shadow-md relative cursor-pointer" title="Timer Tunda">
+                <i class="fa-solid fa-stopwatch text-xs"></i>
+                <span id="timer-label" class="text-[8px] font-bold font-mono text-gold -mt-0.5">Off</span>
+              </button>
+            </div>
+
+            <!-- Middle Control: Shutter Button -->
+            <div class="flex justify-center">
+              <button id="capture-btn" class="w-20 h-20 rounded-full bg-gradient-to-b from-stone-800 to-stone-950 border-4 border-stone-950 hover:from-stone-700 p-1 active:scale-95 transition shadow-2xl relative cursor-pointer" title="Ambil Foto">
+                <div class="w-full h-full rounded-full bg-gradient-to-r from-gold-light via-gold to-gold-dark border border-gold-dark flex items-center justify-center text-stone-950 shadow-inner">
+                  <i class="fa-solid fa-camera text-2xl"></i>
+                </div>
+              </button>
+            </div>
+
+            <!-- Right Control: Remaining Counter -->
+            <div class="flex flex-col items-end justify-center">
+              <div class="bg-black border border-stone-850 rounded px-3 py-2 text-right shadow-inner min-w-[75px]">
+                <span class="block text-[8px] uppercase tracking-wider text-stone-500 font-bold font-cinzel">SISA FOTO</span>
+                <span id="photo-counter" class="text-xl font-mono font-bold text-red-500 tracking-widest">[ 15 ]</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom Branding / User Session Info -->
+          <div class="px-6 py-3.5 bg-stone-950/60 border-t border-stone-800/40 flex justify-between items-center text-[10px]">
+            <span class="text-stone-400">
+              <i class="fa-solid fa-user text-[9px] mr-1 text-gold"></i>
+              Milik: <strong id="user-display" class="text-stone-200 uppercase">Tamu</strong>
+            </span>
+            <button id="btn-logout" class="text-red-400 hover:text-red-300 font-bold uppercase tracking-wider cursor-pointer">
+              Ganti Tamu
+            </button>
+          </div>
+        </div>
+
+        <canvas id="capture-canvas" class="hidden"></canvas>
+
+        <!-- Polaroid Gallery Section -->
+        <div class="space-y-4">
+          <div class="flex justify-between items-center border-b border-stone-800 pb-2">
+            <h3 class="font-cinzel text-xs text-gold uppercase tracking-wider font-bold">Galeri Foto Anda</h3>
+            <span id="gallery-count" class="text-[10px] text-stone-500 font-mono">0 / 15 Foto</span>
+          </div>
+
+          <div id="gallery" class="grid grid-cols-2 gap-4">
+            <!-- Polaroid frames populated by script -->
+          </div>
+        </div>
+
+      </section>
+    </main>
+
+    <footer class="text-center text-[9px] text-stone-600 font-cinzel mt-8 uppercase tracking-widest">
+      &copy; AW Wedding Invitation - Disposable Camera
+    </footer>
+  </div>
+
+  <style>
+    .polaroid-frame {
+      background: #FAF8F5; /* Royal Cream */
+      padding: 8px 8px 24px 8px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+      transform: rotate(var(--rotation, 0deg));
+      transition: transform 0.3s ease;
+    }
+    .polaroid-frame:hover {
+      transform: scale(1.05) rotate(0deg) !important;
+      z-index: 10;
+    }
+  </style>
+
+  <script is:inline>
+    const nameSection = document.getElementById('name-section');
+    const cameraSection = document.getElementById('camera-section');
+    const guestForm = document.getElementById('guest-name-form');
+    const guestInput = document.getElementById('guest-name');
+    
+    const video = document.getElementById('video-stream');
+    const canvas = document.getElementById('capture-canvas');
+    const captureBtn = document.getElementById('capture-btn');
+    const flipBtn = document.getElementById('btn-flip');
+    const timerBtn = document.getElementById('btn-timer');
+    
+    const timerLabel = document.getElementById('timer-label');
+    const ledIndicator = document.getElementById('status-led');
+    const photoCounter = document.getElementById('photo-counter');
+    const galleryCountLabel = document.getElementById('gallery-count');
+    const userDisplay = document.getElementById('user-display');
+    const logoutBtn = document.getElementById('btn-logout');
+    
+    const flashOverlay = document.getElementById('shutter-flash');
+    const countdownOverlay = document.getElementById('countdown-overlay');
+    const countdownNumber = document.getElementById('countdown-number');
+    const loadingOverlay = document.getElementById('shutter-loading');
+    const gallery = document.getElementById('gallery');
+    
+    const guestKey = 'cameraGuest';
+    let currentStream = null;
+    let facingMode = 'environment'; // Default: rear camera
+    let timerValue = 0; // Timer setting: 0, 3, or 5 seconds
+    let activeGuest = '';
+
+    // Parse dynamic settings from attributes
+    const photoLimit = parseInt(cameraSection.getAttribute('data-limit')) || 15;
+    const allowChangeGuest = cameraSection.getAttribute('data-allow-change') === 'true';
+    if (!allowChangeGuest && logoutBtn) {
+      logoutBtn.style.display = 'none';
+    }
+
+    const storedGuest = localStorage.getItem(guestKey);
+    if (storedGuest) {
+      activeGuest = storedGuest;
+      initCamera(activeGuest);
+    } else {
+      nameSection.style.display = 'block';
+    }
+
+    // Name submit logic
+    guestForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const val = guestInput.value.trim();
+      if (!val) return;
+      localStorage.setItem(guestKey, val);
+      activeGuest = val;
+      nameSection.style.display = 'none';
+      initCamera(activeGuest);
+    });
+
+    // Logout / reset guest logic
+    logoutBtn.addEventListener('click', () => {
+      if (currentStream) {
+        currentStream.getTracks().forEach(t => t.stop());
+      }
+      localStorage.removeItem(guestKey);
+      window.location.reload();
+    });
+
+    // Timer cycling logic (Off -> 3s -> 5s -> Off)
+    timerBtn.addEventListener('click', () => {
+      if (timerValue === 0) {
+        timerValue = 3;
+        timerLabel.innerText = '3s';
+        timerLabel.className = 'text-[8px] font-bold font-mono text-emerald-400 -mt-0.5';
+      } else if (timerValue === 3) {
+        timerValue = 5;
+        timerLabel.innerText = '5s';
+        timerLabel.className = 'text-[8px] font-bold font-mono text-emerald-400 -mt-0.5';
+      } else {
+        timerValue = 0;
+        timerLabel.innerText = 'Off';
+        timerLabel.className = 'text-[8px] font-bold font-mono text-gold -mt-0.5';
+      }
+    });
+
+    // Flip camera logic
+    flipBtn.addEventListener('click', () => {
+      facingMode = facingMode === 'environment' ? 'user' : 'environment';
+      startCameraStream(facingMode);
+    });
+
+    // Start stream
+    async function startCameraStream(mode) {
+      if (currentStream) {
+        currentStream.getTracks().forEach(t => t.stop());
+      }
+
+      // Handle mirroring depending on facing mode
+      if (mode === 'user') {
+        video.style.transform = 'scaleX(-1)';
+      } else {
+        video.style.transform = 'none';
+      }
+
+      try {
+        const constraints = {
+          video: {
+            facingMode: { ideal: mode },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: false
+        };
+        currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+        video.srcObject = currentStream;
+      } catch (err) {
+        console.warn('Ideal constraints failed, fallback to default video device:', err);
+        try {
+          currentStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+          video.srcObject = currentStream;
+        } catch (e) {
+          alert('Gagal mengakses kamera. Mohon berikan izin di pengaturan browser Anda.');
+        }
+      }
+    }
+
+    // Initialize disposable camera
+    async function initCamera(guest) {
+      userDisplay.innerText = guest;
+      cameraSection.style.display = 'block';
+      
+      // Load current gallery
+      await loadGallery(guest);
+      
+      // Start camera feed
+      await startCameraStream(facingMode);
+
+      // Shutter click listener
+      captureBtn.addEventListener('click', () => {
+        if (captureBtn.disabled) return;
+        
+        if (timerValue > 0) {
+          runCountdown(timerValue, () => capturePhoto(guest));
+        } else {
+          capturePhoto(guest);
+        }
+      });
+    }
+
+    // Countdown function
+    function runCountdown(seconds, callback) {
+      captureBtn.disabled = true;
+      countdownOverlay.style.opacity = '1';
+      let remaining = seconds;
+      countdownNumber.innerText = remaining.toString();
+
+      const interval = setInterval(() => {
+        remaining--;
+        if (remaining <= 0) {
+          clearInterval(interval);
+          countdownOverlay.style.opacity = '0';
+          captureBtn.disabled = false;
+          callback();
+        } else {
+          countdownNumber.innerText = remaining.toString();
+        }
+      }, 1000);
+    }
+
+    // Shutter capture and upload
+    async function capturePhoto(guest) {
+      // 1. Shutter Flash FX
+      flashOverlay.style.opacity = '1';
+      setTimeout(() => {
+        flashOverlay.style.opacity = '0';
+      }, 150);
+
+      // 2. Fetch existing photos to check limits
+      captureBtn.disabled = true;
+      ledIndicator.className = 'w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444] animate-none';
+      
+      try {
+        const res = await fetch(`/api/camera?guest=${encodeURIComponent(guest)}`);
+        if (res.ok) {
+          const photos = await res.json();
+          if (photos.length >= photoLimit) {
+            alert(`Anda telah mencapai batas maksimal ${photoLimit} foto!`);
+            resetReadyLed();
+            return;
+          }
+        }
+
+      } catch (err) {
+        console.error('Failed verification:', err);
+      }
+
+      // 3. Draw image to canvas
+      const ctx = canvas.getContext('2d');
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+
+      // Handle mirroring context flip if using front camera
+      if (facingMode === 'user') {
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+      }
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      // Reset transform just in case
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+      // 4. Convert and upload
+      loadingOverlay.style.opacity = '1';
+      canvas.toBlob(async (blob) => {
+        if (!blob) {
+          alert('Format data foto rusak.');
+          resetReadyLed();
+          loadingOverlay.style.opacity = '0';
+          return;
+        }
+
+        const form = new FormData();
+        form.append('guest', guest);
+        form.append('photos', blob, `disposable_${Date.now()}.jpg`);
+
+        try {
+          const uploadRes = await fetch('/api/camera', {
+            method: 'POST',
+            body: form,
+          });
+
+          if (uploadRes.ok) {
+            await loadGallery(guest);
+          } else {
+            const err = await uploadRes.json();
+            alert(err.error || 'Gagal menyimpan foto.');
+          }
+        } catch (e) {
+          alert('Masalah koneksi jaringan ke server.');
+        } finally {
+          resetReadyLed();
+          loadingOverlay.style.opacity = '0';
+        }
+      }, 'image/jpeg', 0.92);
+    }
+
+    function resetReadyLed() {
+      captureBtn.disabled = false;
+      ledIndicator.className = 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_#10b981]';
+    }
+
+    // Load gallery files
+    async function loadGallery(guest) {
+      try {
+        const res = await fetch(`/api/camera?guest=${encodeURIComponent(guest)}`);
+        if (!res.ok) return;
+        const photos = await res.json();
+        
+        // Update stats
+        const currentCount = photos.length || 0;
+        const sisa = Math.max(0, photoLimit - currentCount);
+        photoCounter.innerText = `[ ${sisa.toString().padStart(2, '0')} ]`;
+        galleryCountLabel.innerText = `${currentCount} / ${photoLimit} Foto`;
+
+        if (currentCount >= photoLimit) {
+          captureBtn.disabled = true;
+          ledIndicator.className = 'w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_#f59e0b]';
+        }
+
+        // Render photoPolaroids
+        gallery.innerHTML = '';
+        photos.forEach((p, idx) => {
+          // Generate a deterministic random rotation for organic alignment look
+          const rot = ((idx * 7) % 11) - 5; 
+          
+          const createdDate = new Date(p.created_at);
+          const timeStr = createdDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+
+          const col = document.createElement('div');
+          col.className = 'polaroid-frame border border-stone-200 rounded';
+          col.style.setProperty('--rotation', `${rot}deg`);
+
+          col.innerHTML = `
+            <div class="aspect-square w-full bg-stone-850 overflow-hidden relative mb-2">
+              <img src="${p.url}" class="w-full h-full object-cover" alt="Foto Polaroid" />
+            </div>
+            <div class="text-[9px] text-stone-800 font-mono tracking-widest text-center truncate uppercase">
+              ${timeStr}
+            </div>
+          `;
+          gallery.appendChild(col);
+        });
+      } catch (err) {
+        console.error('Gallery loading error:', err);
+      }
+    }
+  </script>
+</Layout>
