@@ -77,7 +77,7 @@ try {
           <div class="p-4 bg-stone-900">
             <div class="relative aspect-[4/3] rounded-2xl overflow-hidden bg-black shadow-inner border border-stone-950">
               <!-- Video Element -->
-              <video id="video-stream" autoplay playsinline class="w-full h-full object-cover scale-x-[-1]"></video>
+              <video id="video-stream" autoplay playsinline class="w-full h-full object-cover"></video>
               
               <!-- Crosshair Overlay -->
               <div class="absolute inset-0 border border-white/10 pointer-events-none flex items-center justify-center">
@@ -116,6 +116,10 @@ try {
               <button id="btn-timer" class="w-10 h-10 rounded-full bg-stone-950 hover:bg-stone-800 text-stone-300 flex flex-col items-center justify-center border border-stone-800 transition active:scale-95 shadow-md relative cursor-pointer" title="Timer Tunda">
                 <i class="fa-solid fa-stopwatch text-xs"></i>
                 <span id="timer-label" class="text-[8px] font-bold font-mono text-gold -mt-0.5">Off</span>
+              </button>
+              <button id="btn-mirror" class="w-10 h-10 rounded-full bg-stone-950 hover:bg-stone-800 text-stone-300 flex flex-col items-center justify-center border border-stone-800 transition active:scale-95 shadow-md relative cursor-pointer" title="Cermin Kiri/Kanan">
+                <i class="fa-solid fa-arrows-left-right text-xs"></i>
+                <span id="mirror-label" class="text-[8px] font-bold font-mono text-gold -mt-0.5">Off</span>
               </button>
             </div>
 
@@ -196,8 +200,10 @@ try {
     const captureBtn = document.getElementById('capture-btn');
     const flipBtn = document.getElementById('btn-flip');
     const timerBtn = document.getElementById('btn-timer');
+    const mirrorBtn = document.getElementById('btn-mirror');
     
     const timerLabel = document.getElementById('timer-label');
+    const mirrorLabel = document.getElementById('mirror-label');
     const ledIndicator = document.getElementById('status-led');
     const photoCounter = document.getElementById('photo-counter');
     const galleryCountLabel = document.getElementById('gallery-count');
@@ -215,6 +221,7 @@ try {
     let facingMode = 'environment'; // Default: rear camera
     let timerValue = 0; // Timer setting: 0, 3, or 5 seconds
     let activeGuest = '';
+    let isMirrored = false; // Active preview mirroring state
 
     // Parse dynamic settings from attributes
     const photoLimit = parseInt(cameraSection.getAttribute('data-limit')) || 15;
@@ -268,6 +275,24 @@ try {
       }
     });
 
+    // Mirror button click listener
+    mirrorBtn.addEventListener('click', () => {
+      isMirrored = !isMirrored;
+      updateMirroring();
+    });
+
+    function updateMirroring() {
+      if (isMirrored) {
+        video.style.transform = 'scaleX(-1)';
+        mirrorLabel.innerText = 'On';
+        mirrorLabel.className = 'text-[8px] font-bold font-mono text-emerald-400 -mt-0.5';
+      } else {
+        video.style.transform = 'scaleX(1)';
+        mirrorLabel.innerText = 'Off';
+        mirrorLabel.className = 'text-[8px] font-bold font-mono text-gold -mt-0.5';
+      }
+    }
+
     // Flip camera logic
     flipBtn.addEventListener('click', () => {
       facingMode = facingMode === 'environment' ? 'user' : 'environment';
@@ -280,12 +305,9 @@ try {
         currentStream.getTracks().forEach(t => t.stop());
       }
 
-      // Handle mirroring depending on facing mode
-      if (mode === 'user') {
-        video.style.transform = 'scaleX(-1)';
-      } else {
-        video.style.transform = 'none';
-      }
+      // Default mirroring on front camera, off on rear camera
+      isMirrored = (mode === 'user');
+      updateMirroring();
 
       try {
         const constraints = {
@@ -384,8 +406,8 @@ try {
       canvas.width = video.videoWidth || 640;
       canvas.height = video.videoHeight || 480;
 
-      // Handle mirroring context flip if using front camera
-      if (facingMode === 'user') {
+      // Handle mirroring context flip if mirroring is active
+      if (isMirrored) {
         ctx.translate(canvas.width, 0);
         ctx.scale(-1, 1);
       }
