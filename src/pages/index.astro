@@ -1,0 +1,48 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Cover from '../components/Cover.astro';
+import MusicPlayer from '../components/MusicPlayer.astro';
+import Hero from '../components/Hero.astro';
+import Quote from '../components/Quote.astro';
+import GroomBride from '../components/GroomBride.astro';
+import EventDetails from '../components/EventDetails.astro';
+import RSVP from '../components/RSVP.astro';
+import Gift from '../components/Gift.astro';
+import Footer from '../components/Footer.astro';
+import Toast from '../components/Toast.astro';
+---
+
+<Layout title="The Royal Wedding of Wira & Ayu">
+	<!-- Invitation Gate / Cover Screen -->
+	<Cover />
+
+	<!-- Background Music Controller -->
+	<MusicPlayer />
+
+	<!-- Main Content Area (unlocked by opening the cover) -->
+	<div id="main-content" class="opacity-0 transition-opacity duration-1000 pointer-events-none">
+		<!-- Hero Section -->
+		<Hero />
+
+		<!-- Quote Section -->
+		<Quote />
+
+		<!-- Groom and Bride Details -->
+		<GroomBride />
+
+		<!-- Event Schedule Details -->
+		<EventDetails />
+
+		<!-- RSVP and Guest Wishes -->
+		<RSVP />
+
+		<!-- Gift and Account Details -->
+		<Gift />
+
+		<!-- Footer -->
+		<Footer />
+	</div>
+
+	<!-- Custom Toast Notifications -->
+	<Toast />
+</Layout>

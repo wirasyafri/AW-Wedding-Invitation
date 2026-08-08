@@ -1,0 +1,46 @@
+---
+---
+<audio id="bg-music" loop>
+    <source src="/wedding-song.mp3" type="audio/mpeg">
+</audio>
+
+<div id="music-toggle" class="fixed bottom-6 right-6 z-40 hidden w-12 h-12 bg-stone-900/90 border border-gold text-gold rounded-full shadow-2xl flex items-center justify-center cursor-pointer hover:bg-gold hover:text-stone-900 transition-all duration-300">
+    <i id="music-icon" class="fa-solid fa-music text-lg animate-spin"></i>
+</div>
+
+<script>
+    let isPlaying = true;
+    const audio = document.getElementById('bg-music') as HTMLAudioElement;
+    const toggle = document.getElementById('music-toggle');
+    const icon = document.getElementById('music-icon');
+
+    function triggerToast(text: string) {
+        const toast = document.getElementById('toast');
+        if (toast) {
+            toast.innerText = text;
+            toast.style.opacity = '1';
+            toast.style.transform = 'translate(-50%, -20px)';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translate(-50%, 0)';
+            }, 3000);
+        }
+    }
+
+    toggle?.addEventListener('click', () => {
+        if (!audio || !icon) return;
+
+        if (isPlaying) {
+            audio.pause();
+            icon.classList.remove('animate-spin', 'fa-music');
+            icon.classList.add('fa-volume-xmark');
+            triggerToast("Musik Latar Dijeda");
+        } else {
+            audio.play().catch(e => console.log("Audio autoplay restricted", e));
+            icon.classList.remove('fa-volume-xmark');
+            icon.classList.add('animate-spin', 'fa-music');
+            triggerToast("Musik Latar Dinyalakan");
+        }
+        isPlaying = !isPlaying;
+    });
+</script>

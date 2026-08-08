@@ -1,0 +1,173 @@
+---
+---
+<section class="py-24 px-4 bg-stone-900 text-stone-100">
+    <div class="max-w-3xl mx-auto">
+        <div class="text-center mb-12">
+            <span class="font-cinzel uppercase tracking-[0.3em] text-xs text-gold block mb-2">Kehadiran & Doa</span>
+            <h2 class="font-script text-5xl md:text-6xl text-gold-light mb-4">RSVP & Ucapan</h2>
+            <p class="text-stone-400 text-sm">Berikan konfirmasi kehadiran serta doa restu terbaik Anda untuk kedua mempelai.</p>
+        </div>
+
+        <form id="rsvp-form" class="bg-stone-950/80 p-8 rounded-2xl border border-gold/30 shadow-2xl space-y-6 mb-12">
+            <div>
+                <label class="block font-cinzel text-xs text-gold uppercase tracking-wider mb-2">Nama Lengkap</label>
+                <input type="text" id="rsvp-name" required placeholder="Masukkan nama Anda" class="w-full bg-stone-900 border border-stone-800 rounded-lg px-4 py-3 text-stone-100 focus:outline-none focus:border-gold transition">
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block font-cinzel text-xs text-gold uppercase tracking-wider mb-2">Konfirmasi Kehadiran</label>
+                    <select id="rsvp-status" class="w-full bg-stone-900 border border-stone-800 rounded-lg px-4 py-3 text-stone-100 focus:outline-none focus:border-gold transition">
+                        <option value="Hadir">Hadir (Hadir di Acara)</option>
+                        <option value="Berhalangan">Berhalangan Hadir</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-cinzel text-xs text-gold uppercase tracking-wider mb-2">Jumlah Tamu</label>
+                    <select id="rsvp-guests" class="w-full bg-stone-900 border border-stone-800 rounded-lg px-4 py-3 text-stone-100 focus:outline-none focus:border-gold transition">
+                        <option value="1 Orang">1 Orang</option>
+                        <option value="2 Orang">2 Orang</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="block font-cinzel text-xs text-gold uppercase tracking-wider mb-2">Ucapan & Doa Restu</label>
+                <textarea id="rsvp-message" rows="4" required placeholder="Tuliskan ucapan atau doa restu..." class="w-full bg-stone-900 border border-stone-800 rounded-lg px-4 py-3 text-stone-100 focus:outline-none focus:border-gold transition"></textarea>
+            </div>
+            <button type="submit" class="w-full py-4 font-cinzel text-sm uppercase tracking-widest text-stone-900 font-bold rounded-lg bg-gradient-to-r from-gold-light via-gold to-gold-dark shadow-lg hover:opacity-95 transition cursor-pointer">
+                Kirim Konfirmasi & Ucapan
+            </button>
+        </form>
+
+        <!-- Wishes Stream Container -->
+        <div class="bg-stone-950/80 p-8 rounded-2xl border border-gold/30 shadow-2xl">
+            <h3 class="font-cinzel text-lg text-gold mb-6 border-b border-stone-800 pb-3 flex items-center justify-between">
+                <span>Daftar Ucapan Tamu</span>
+                <span id="wishes-count" class="text-xs bg-gold/10 text-gold px-3 py-1 rounded-full border border-gold/30">3 Ucapan</span>
+            </h3>
+            <div id="wishes-list" class="space-y-4 max-h-96 overflow-y-auto pr-2">
+                <!-- Fallback comments placeholder while scripts load -->
+                <div class="bg-stone-900/80 p-4 rounded-xl border border-stone-800">
+                    <div class="flex items-center justify-between mb-1">
+                        <h4 class="font-bold text-gold text-sm">Bpk. H. Ahmad & Keluarga</h4>
+                        <span class="text-[10px] text-stone-400 bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20">Hadir</span>
+                    </div>
+                    <p class="text-stone-300 text-xs leading-relaxed">Barakallahu lakuma wa baraka 'alaykuma wa jama'a bainakuma fi khair. Semoga menjadi keluarga sakinah, mawaddah, warahmah!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    interface Wish {
+        name: string;
+        status: string;
+        message: string;
+    }
+
+    const defaultWishes: Wish[] = [
+        {
+            name: "Bpk. H. Ahmad & Keluarga",
+            status: "Hadir",
+            message: "Barakallahu lakuma wa baraka 'alaykuma wa jama'a bainakuma fi khair. Semoga menjadi keluarga sakinah, mawaddah, warahmah!"
+        },
+        {
+            name: "Sarah Maharani",
+            status: "Hadir",
+            message: "Selamat menempuh hidup baru Wira & Ayu! Lancar sampai hari H dan bahagia selalu selamanya."
+        },
+        {
+            name: "Rizky & Partner",
+            status: "Berhalangan",
+            message: "Mohon maaf berhalangan hadir karena ada tugas luar kota. Doa terbaik menyertai pernikahan kalian berdua!"
+        }
+    ];
+
+    function escapeHTML(str: string) {
+        return str.replace(/[&<>'"]/g, 
+            tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+        );
+    }
+
+    function triggerToast(text: string) {
+        const toast = document.getElementById('toast');
+        if (toast) {
+            toast.innerText = text;
+            toast.style.opacity = '1';
+            toast.style.transform = 'translate(-50%, -20px)';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translate(-50%, 0)';
+            }, 3000);
+        }
+    }
+
+    function loadWishes(): Wish[] {
+        const stored = localStorage.getItem('wedding_wishes');
+        if (stored) {
+            try {
+                return JSON.parse(stored) as Wish[];
+            } catch (e) {
+                return defaultWishes;
+            }
+        }
+        return defaultWishes;
+    }
+
+    function saveWishes(wishes: Wish[]) {
+        localStorage.setItem('wedding_wishes', JSON.stringify(wishes));
+    }
+
+    function renderWishes() {
+        const list = document.getElementById('wishes-list');
+        const countElem = document.getElementById('wishes-count');
+        if (!list || !countElem) return;
+
+        const wishes = loadWishes();
+        countElem.innerText = wishes.length + ' Ucapan';
+
+        list.innerHTML = wishes.map(wish => {
+            const badgeClass = wish.status === 'Hadir' 
+                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                : 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+
+            return `
+                <div class="bg-stone-900/80 p-4 rounded-xl border border-stone-800">
+                    <div class="flex items-center justify-between mb-1">
+                        <h4 class="font-bold text-gold text-sm">${escapeHTML(wish.name)}</h4>
+                        <span class="text-[10px] ${badgeClass} px-2 py-0.5 rounded border">${wish.status}</span>
+                    </div>
+                    <p class="text-stone-300 text-xs leading-relaxed">${escapeHTML(wish.message)}</p>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Initialize wishes wall
+    renderWishes();
+
+    const form = document.getElementById('rsvp-form') as HTMLFormElement;
+    form?.addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        const nameElem = document.getElementById('rsvp-name') as HTMLInputElement;
+        const statusElem = document.getElementById('rsvp-status') as HTMLSelectElement;
+        const messageElem = document.getElementById('rsvp-message') as HTMLTextAreaElement;
+
+        if (!nameElem || !statusElem || !messageElem) return;
+
+        const newWish: Wish = {
+            name: nameElem.value,
+            status: statusElem.value,
+            message: messageElem.value
+        };
+
+        const wishes = loadWishes();
+        wishes.unshift(newWish); // prepend to show on top
+        saveWishes(wishes);
+        renderWishes();
+
+        form.reset();
+        triggerToast("Ucapan & RSVP Berhasil Dikirim!");
+    });
+</script>

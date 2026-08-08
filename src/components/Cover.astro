@@ -1,0 +1,65 @@
+---
+---
+
+<div id="invitation-cover" class="fixed inset-0 z-50 flex items-center justify-center royal-bg px-4 transition-opacity duration-1000">
+    <div class="absolute inset-0 opacity-20 bg-[radial-gradient(var(--color-gold)_1px,transparent_1px)] [background-size:24px_24px]"></div>
+    
+    <div class="relative z-10 max-w-lg w-full bg-stone-900/90 border-2 border-gold/40 rounded-2xl p-8 md:p-12 text-center shadow-2xl backdrop-blur-md">
+        <!-- Decorative Crown / Palace Icon -->
+        <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gold/10 border border-gold/30 mb-6 text-gold text-3xl animate-float">
+            <i class="fa-solid fa-crown"></i>
+        </div>
+        
+        <p class="font-cinzel tracking-[0.3em] text-xs uppercase text-gold/80 mb-3">The Royal Wedding Invitation</p>
+        <h1 class="font-script text-5xl md:text-6xl text-gold-light mb-4">Wira & Ayu</h1>
+        
+        <div class="w-24 h-[1px] bg-gradient-to-r from-transparent via-gold to-transparent mx-auto my-6"></div>
+        
+        <p class="text-stone-300 text-sm font-light mb-2">Kepada Yth. Bapak/Ibu/Saudara/i</p>
+        <div id="guest-name-display" class="font-cinzel font-bold text-lg text-gold mb-8 bg-stone-800/80 py-3 px-6 rounded-lg border border-gold/20 inline-block w-full">
+            Tamu Undangan Kehormatan
+        </div>
+
+        <button id="open-invitation-btn" class="group relative inline-flex items-center justify-center px-8 py-4 font-cinzel text-sm uppercase tracking-widest text-stone-900 font-bold overflow-hidden rounded-full bg-gradient-to-r from-gold-light via-gold to-gold-dark shadow-lg transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer">
+            <span class="absolute inset-0 w-full h-full bg-white/20 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
+            <i class="fa-solid fa-envelope-open mr-3"></i> Buka Undangan
+        </button>
+    </div>
+</div>
+
+<script>
+    // Extract Guest Name from URL parameter (?to=Nama+Tamu)
+    window.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const guest = urlParams.get('to');
+        const display = document.getElementById('guest-name-display');
+        if (guest && display) {
+            display.innerText = decodeURIComponent(guest);
+        }
+    });
+
+    // Handle invitation opening
+    const openBtn = document.getElementById('open-invitation-btn');
+    openBtn?.addEventListener('click', () => {
+        const cover = document.getElementById('invitation-cover');
+        const mainContent = document.getElementById('main-content');
+        const musicToggle = document.getElementById('music-toggle');
+        const audio = document.getElementById('bg-music') as HTMLAudioElement;
+
+        if (cover) {
+            cover.style.opacity = '0';
+            setTimeout(() => {
+                cover.style.display = 'none';
+                if (mainContent) {
+                    mainContent.classList.remove('opacity-0', 'pointer-events-none');
+                }
+                if (musicToggle) {
+                    musicToggle.classList.remove('hidden');
+                }
+                if (audio) {
+                    audio.play().catch(e => console.log("Audio autoplay restricted", e));
+                }
+            }, 1000);
+        }
+    });
+</script>

@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@theme {
+  --color-gold: #D4AF37;
+  --color-gold-light: #F3E5AB;
+  --color-gold-dark: #AA820A;
+  --color-gold-champagne: #FDF6E2;
+
+  --color-royal-navy: #0B1B3D;
+  --color-royal-cream: #FAF8F5;
+  --color-royal-accent: #8C6D36;
+
+  --font-cinzel: "Cinzel", serif;
+  --font-script: "Great Vibes", cursive;
+  --font-sans: "Plus Jakarta Sans", sans-serif;
+
+  --animate-float: float 4s ease-in-out infinite;
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+}
+
+@utility gold-gradient-text {
+  background: linear-gradient(135deg, #BF953F 0%, #FCF6BA 25%, #B38728 50%, #FBF5B7 75%, #AA771C 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+@utility gold-border {
+  border-image: linear-gradient(to right, #BF953F, #FCF6BA, #AA771C) 1;
+}
+
+@utility royal-bg {
+  background: radial-gradient(circle at center, #112244 0%, #081123 100%);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #FAF8F5;
+}
+::-webkit-scrollbar-thumb {
+  background: #D4AF37;
+  border-radius: 4px;
+}

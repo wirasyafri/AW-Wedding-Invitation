@@ -1,0 +1,39 @@
+---
+---
+<section class="py-24 px-4 bg-royal-cream text-stone-800 text-center">
+    <div class="max-w-xl mx-auto bg-white p-8 md:p-12 rounded-2xl shadow-xl border border-gold/30">
+        <div class="text-gold text-4xl mb-4"><i class="fa-solid fa-gift"></i></div>
+        <span class="font-cinzel uppercase tracking-[0.3em] text-xs text-stone-600 block mb-2">Tanda Kasih</span>
+        <h2 class="font-script text-4xl md:text-5xl text-gold-dark mb-4">Kirim Hadiah</h2>
+        <p class="text-stone-600 text-sm mb-8">Doa restu Anda merupakan karunia terindah bagi kami. Namun jika Anda ingin mengirimkan tanda kasih, silakan melalui tautan di bawah ini:</p>
+        
+        <div class="bg-stone-50 p-6 rounded-xl border border-gold/20 mb-6">
+            <p class="font-cinzel text-xs text-stone-500 uppercase mb-1">Bank BCA</p>
+            <p id="bank-acc" class="font-mono text-xl md:text-2xl font-bold text-stone-900 mb-2">1234 5678 90</p>
+            <p class="text-xs text-stone-600 mb-4">a.n. Reynaldi Pratama</p>
+            <button id="copy-acc-btn" class="inline-flex items-center px-4 py-2 bg-gold/10 border border-gold text-gold-dark font-cinzel text-xs font-bold rounded-lg hover:bg-gold hover:text-stone-950 transition cursor-pointer">
+                <i class="fa-regular fa-copy mr-2"></i> Salin Nomor Rekening
+            </button>
+        </div>
+    </div>
+</section>
+
+<script>
+    const copyBtn = document.getElementById('copy-acc-btn');
+    copyBtn?.addEventListener('click', () => {
+        navigator.clipboard.writeText('1234567890').then(() => {
+            const toast = document.getElementById('toast');
+            if (toast) {
+                toast.innerText = "Nomor Rekening Disalin ke Clipboard!";
+                toast.style.opacity = '1';
+                toast.style.transform = 'translate(-50%, -20px)';
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    toast.style.transform = 'translate(-50%, 0)';
+                }, 3000);
+            }
+        }).catch(err => {
+            console.error('Could not copy text: ', err);
+        });
+    });
+</script>

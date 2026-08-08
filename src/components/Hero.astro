@@ -1,0 +1,77 @@
+---
+---
+<section class="relative min-h-screen flex items-center justify-center text-center px-4 overflow-hidden">
+    <!-- Background Image overlay -->
+    <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('/hero-bg.png');"></div>
+    <div class="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/70 to-stone-950/40"></div>
+    
+    <div class="relative z-10 max-w-3xl mx-auto py-20 text-stone-100">
+        <span class="inline-block font-cinzel uppercase tracking-[0.4em] text-xs md:text-sm text-gold bg-stone-950/60 px-6 py-2 rounded-full border border-gold/40 mb-6 backdrop-blur-sm">
+            Pernikahan Suci
+        </span>
+        <h1 class="font-script text-6xl md:text-8xl text-gold-light mb-6 drop-shadow-md">Wira & Ayu</h1>
+        <p class="font-cinzel text-lg md:text-xl tracking-widest text-stone-300 mb-8">Minggu, 5 Januari 2027</p>
+        
+        <!-- Countdown Timer -->
+        <div class="grid grid-cols-4 gap-3 max-w-md mx-auto mb-10 bg-stone-900/80 p-4 rounded-xl border border-gold/30 backdrop-blur-md">
+            <div class="text-center">
+                <span id="days" class="font-cinzel text-2xl md:text-3xl font-bold text-gold block">00</span>
+                <span class="text-[10px] uppercase tracking-wider text-stone-400">Hari</span>
+            </div>
+            <div class="text-center">
+                <span id="hours" class="font-cinzel text-2xl md:text-3xl font-bold text-gold block">00</span>
+                <span class="text-[10px] uppercase tracking-wider text-stone-400">Jam</span>
+            </div>
+            <div class="text-center">
+                <span id="minutes" class="font-cinzel text-2xl md:text-3xl font-bold text-gold block">00</span>
+                <span class="text-[10px] uppercase tracking-wider text-stone-400">Menit</span>
+            </div>
+            <div class="text-center">
+                <span id="seconds" class="font-cinzel text-2xl md:text-3xl font-bold text-gold block">00</span>
+                <span class="text-[10px] uppercase tracking-wider text-stone-400">Detik</span>
+            </div>
+        </div>
+
+        <a href="#quote" class="inline-flex items-center justify-center w-10 h-10 rounded-full border border-gold/50 text-gold animate-bounce hover:bg-gold hover:text-stone-900 transition">
+            <i class="fa-solid fa-chevron-down"></i>
+        </a>
+    </div>
+</section>
+
+<script>
+    // Set Target Date: Jan 5, 2027 08:00:00 WIB (UTC+7)
+    // We can use a standardized string to create a Date object
+    const weddingDate = new Date('2027-01-05T08:00:00+07:00').getTime();
+    
+    function updateCountdown() {
+        const now = new Date().getTime();
+        const diff = weddingDate - now;
+
+        const daysElem = document.getElementById('days');
+        const hoursElem = document.getElementById('hours');
+        const minutesElem = document.getElementById('minutes');
+        const secondsElem = document.getElementById('seconds');
+
+        if (!daysElem || !hoursElem || !minutesElem || !secondsElem) return;
+
+        if (diff > 0) {
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+            daysElem.innerText = String(days).padStart(2, '0');
+            hoursElem.innerText = String(hours).padStart(2, '0');
+            minutesElem.innerText = String(minutes).padStart(2, '0');
+            secondsElem.innerText = String(seconds).padStart(2, '0');
+        } else {
+            daysElem.innerText = "00";
+            hoursElem.innerText = "00";
+            minutesElem.innerText = "00";
+            secondsElem.innerText = "00";
+        }
+    }
+    
+    setInterval(updateCountdown, 1000);
+    updateCountdown();
+</script>
