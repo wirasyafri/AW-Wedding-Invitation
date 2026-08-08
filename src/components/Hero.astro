@@ -1,19 +1,20 @@
 ---
+const { settings } = Astro.props;
 ---
 <section class="relative min-h-screen flex items-center justify-center text-center px-4 overflow-hidden">
     <!-- Background Image overlay -->
-    <div class="absolute inset-0 bg-cover bg-center animate-kenburns" style="background-image: url('/hero-bg.png');"></div>
+    <div class="absolute inset-0 bg-cover bg-center animate-kenburns" style={`background-image: url('${settings.hero_bg}');`}></div>
     <div class="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/70 to-stone-950/40"></div>
     
     <div class="relative z-10 max-w-3xl mx-auto py-20 text-stone-100 reveal">
         <span class="inline-block font-cinzel uppercase tracking-[0.4em] text-xs md:text-sm text-gold bg-stone-950/60 px-6 py-2 rounded-full border border-gold/40 mb-6 backdrop-blur-sm">
             Pernikahan Suci
         </span>
-        <h1 class="font-script text-6xl md:text-8xl text-gold-light mb-6 drop-shadow-md">Wira & Ayu</h1>
-        <p class="font-cinzel text-lg md:text-xl tracking-widest text-stone-300 mb-8">Selasa, 5 Januari 2027</p>
+        <h1 class="font-script text-6xl md:text-8xl text-gold-light mb-6 drop-shadow-md">{settings.groom_name_short} & {settings.bride_name_short}</h1>
+        <p class="font-cinzel text-lg md:text-xl tracking-widest text-stone-300 mb-8">{settings.akad_date}</p>
         
         <!-- Countdown Timer -->
-        <div class="grid grid-cols-4 gap-3 max-w-md mx-auto mb-10 bg-stone-900/80 p-4 rounded-xl border border-gold/30 backdrop-blur-md">
+        <div id="countdown-timer" class="grid grid-cols-4 gap-3 max-w-md mx-auto mb-10 bg-stone-900/80 p-4 rounded-xl border border-gold/30 backdrop-blur-md" data-target-date={settings.countdown_target_date}>
             <div class="text-center">
                 <span id="days" class="font-cinzel text-2xl md:text-3xl font-bold text-gold block">00</span>
                 <span class="text-[10px] uppercase tracking-wider text-stone-400">Hari</span>
@@ -39,9 +40,9 @@
 </section>
 
 <script>
-    // Set Target Date: Jan 5, 2027 08:00:00 WIB (UTC+7)
-    // We can use a standardized string to create a Date object
-    const weddingDate = new Date('2027-01-05T08:00:00+07:00').getTime();
+    const timerElem = document.getElementById('countdown-timer');
+    const targetDateStr = timerElem?.getAttribute('data-target-date') || '2027-01-05T08:00:00+07:00';
+    const weddingDate = new Date(targetDateStr).getTime();
     
     function updateCountdown() {
         const now = new Date().getTime();

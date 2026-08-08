@@ -34,9 +34,14 @@
                 <label class="block font-cinzel text-xs text-gold uppercase tracking-wider mb-2">Ucapan & Doa Restu</label>
                 <textarea id="rsvp-message" rows="4" required placeholder="Tuliskan ucapan atau doa restu..." class="w-full bg-stone-900 border border-stone-800 rounded-lg px-4 py-3 text-stone-100 focus:outline-none focus:border-gold transition"></textarea>
             </div>
-            <button type="submit" class="w-full py-4 font-cinzel text-sm uppercase tracking-widest text-stone-900 font-bold rounded-lg bg-gradient-to-r from-gold-light via-gold to-gold-dark shadow-lg hover:opacity-95 transition cursor-pointer">
-                Kirim Konfirmasi & Ucapan
-            </button>
+            <div class="flex flex-col gap-3">
+                <button type="submit" id="rsvp-submit-btn" class="w-full py-4 font-cinzel text-sm uppercase tracking-widest text-stone-900 font-bold rounded-lg bg-gradient-to-r from-gold-light via-gold to-gold-dark shadow-lg hover:opacity-95 transition cursor-pointer">
+                    Kirim Konfirmasi & Ucapan
+                </button>
+                <a id="rsvp-wa-btn" href="#" target="_blank" class="w-full py-4 font-cinzel text-sm uppercase tracking-widest text-emerald-400 border border-emerald-500/30 font-bold rounded-lg bg-emerald-950/20 shadow-lg hover:bg-emerald-500 hover:text-stone-950 transition cursor-pointer hidden text-center flex items-center justify-center">
+                    <i class="fa-brands fa-whatsapp mr-2 text-lg"></i> Kirim via WhatsApp
+                </a>
+            </div>
         </form>
 
         <!-- Wishes Stream Container -->
@@ -54,40 +59,14 @@
 
 <script>
     interface Wish {
+        id: number;
+        created_at: string;
         name: string;
         status: string;
         message: string;
-        timestamp: number;
         likes: number;
         guests: string;
     }
-
-    const defaultWishes: Wish[] = [
-        {
-            name: "Bpk. Pitak & Keluarga",
-            status: "Hadir",
-            message: "Barakallahu lakuma wa baraka 'alaykuma wa jama'a bainakuma fi khair. Semoga menjadi keluarga sakinah, mawaddah, warahmah!",
-            timestamp: Date.now() - 3 * 3600000,
-            likes: 5,
-            guests: "2 Orang"
-        },
-        {
-            name: "Mujaer & Keluarga",
-            status: "Hadir",
-            message: "Selamat menempuh hidup baru Wira & Ayu! Lancar sampai hari H dan bahagia selalu selamanya.",
-            timestamp: Date.now() - 10 * 3600000,
-            likes: 3,
-            guests: "2 Orang"
-        },
-        {
-            name: "Koceng Jukir Jakarta",
-            status: "Berhalangan",
-            message: "Mohon maaf berhalangan hadir karena ada tugas luar kota. Doa terbaik menyertai pernikahan kalian berdua!",
-            timestamp: Date.now() - 24 * 3600000,
-            likes: 1,
-            guests: "1 Orang"
-        }
-    ];
 
     function escapeHTML(str: string) {
         return str.replace(/[&<>'"]/g, 
@@ -120,34 +99,33 @@
         return `${days} hari yang lalu`;
     }
 
-    function loadWishes(): Wish[] {
-        const stored = localStorage.getItem('wedding_wishes');
-        if (stored) {
-            try {
-                return JSON.parse(stored) as Wish[];
-            } catch (e) {
-                return defaultWishes;
+    let wishesCache: Wish[] = [];
+
+    async function fetchWishes() {
+        try {
+            const res = await fetch('/api/wishes');
+            if (res.ok) {
+                wishesCache = await res.json();
+                renderWishesList(wishesCache);
             }
+        } catch (e) {
+            console.error("Failed to fetch wishes", e);
         }
-        return defaultWishes;
     }
 
-    function saveWishes(wishes: Wish[]) {
-        localStorage.setItem('wedding_wishes', JSON.stringify(wishes));
-    }
-
-    function renderWishes() {
+    function renderWishesList(wishes: Wish[]) {
         const list = document.getElementById('wishes-list');
         const countElem = document.getElementById('wishes-count');
         if (!list || !countElem) return;
 
-        const wishes = loadWishes();
         countElem.innerText = wishes.length + ' Ucapan';
 
         list.innerHTML = wishes.map(wish => {
             const badgeClass = wish.status === 'Hadir' 
                 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
                 : 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+
+            const timeVal = wish.created_at ? new Date(wish.created_at).getTime() : Date.now();
 
             return `
                 <div class="bg-stone-900/80 p-4 rounded-xl border border-stone-800 flex flex-col justify-between">
@@ -159,8 +137,8 @@
                         <p class="text-stone-300 text-xs leading-relaxed">${escapeHTML(wish.message)}</p>
                     </div>
                     <div class="flex items-center justify-between mt-3 pt-2 border-t border-stone-800/40">
-                        <span class="text-[10px] text-stone-500">${getRelativeTime(wish.timestamp)}</span>
-                        <button class="like-btn flex items-center gap-1.5 text-stone-400 hover:text-rose-500 text-xs font-cinzel transition cursor-pointer" data-id="${wish.timestamp}">
+                        <span class="text-[10px] text-stone-500">${getRelativeTime(timeVal)}</span>
+                        <button class="like-btn flex items-center gap-1.5 text-stone-400 hover:text-rose-500 text-xs font-cinzel transition cursor-pointer" data-id="${wish.id}">
                             <i class="fa-solid fa-heart text-[10px] text-stone-500 hover:text-rose-500 transition-colors"></i>
                             <span>${wish.likes || 0}</span>
                         </button>
@@ -171,27 +149,38 @@
 
         // Attach heart reaction event listeners
         document.querySelectorAll('.like-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const id = Number(btn.getAttribute('data-id'));
-                const storedWishes = loadWishes();
-                const updated = storedWishes.map(w => {
-                    if (w.timestamp === id) {
-                        return { ...w, likes: (w.likes || 0) + 1 };
+            btn.addEventListener('click', async () => {
+                const id = btn.getAttribute('data-id');
+                if (!id) return;
+
+                // Optimistic UI updates
+                const span = btn.querySelector('span');
+                if (span) {
+                    span.innerText = String((Number(span.innerText) || 0) + 1);
+                }
+
+                try {
+                    const res = await fetch('/api/like', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id })
+                    });
+                    if (res.ok) {
+                        triggerToast("Ucapan disukai!");
+                        fetchWishes(); // reload to keep in sync
                     }
-                    return w;
-                });
-                saveWishes(updated);
-                renderWishes();
-                triggerToast("Ucapan disukai!");
+                } catch (e) {
+                    console.error("Failed to send like", e);
+                }
             });
         });
     }
 
-    // Initialize wishes wall
-    renderWishes();
+    // Initialize wishes wall by fetching from server API
+    fetchWishes();
 
     const form = document.getElementById('rsvp-form') as HTMLFormElement;
-    form?.addEventListener('submit', (e) => {
+    form?.addEventListener('submit', async (e) => {
         e.preventDefault();
 
         const nameElem = document.getElementById('rsvp-name') as HTMLInputElement;
@@ -201,32 +190,43 @@
 
         if (!nameElem || !statusElem || !guestsElem || !messageElem) return;
 
-        const newWish: Wish = {
+        const wishData = {
             name: nameElem.value,
             status: statusElem.value,
             guests: guestsElem.value,
-            message: messageElem.value,
-            timestamp: Date.now(),
-            likes: 0
+            message: messageElem.value
         };
 
-        // Save locally first
-        const wishes = loadWishes();
-        wishes.unshift(newWish);
-        saveWishes(wishes);
-        renderWishes();
+        // Submit to backend database API
+        try {
+            const res = await fetch('/api/wishes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(wishData)
+            });
+            if (res.ok) {
+                fetchWishes(); // refresh local comments feed
+                
+                // Configure WhatsApp Button
+                const weddingPhoneNumber = "62895395272714"; // Wira's WhatsApp
+                const waMessage = `Halo Wira & Ayu, saya *${wishData.name}* ingin mengonfirmasi kehadiran di acara pernikahan Anda.\n\n*Konfirmasi Kehadiran:* ${wishData.status}\n*Jumlah Tamu:* ${wishData.guests}\n\n*Ucapan & Doa:* \n"${wishData.message}"`;
+                const waUrl = `https://api.whatsapp.com/send?phone=${weddingPhoneNumber}&text=${encodeURIComponent(waMessage)}`;
 
-        // Redirect to WhatsApp
-        const weddingPhoneNumber = "62895395272714"; // Wira's WhatsApp
-        const waMessage = `Halo Wira & Ayu, saya *${newWish.name}* ingin mengonfirmasi kehadiran di acara pernikahan Anda.\n\n*Konfirmasi Kehadiran:* ${newWish.status}\n*Jumlah Tamu:* ${newWish.guests}\n\n*Ucapan & Doa:* \n"${newWish.message}"`;
-        const waUrl = `https://api.whatsapp.com/send?phone=${weddingPhoneNumber}&text=${encodeURIComponent(waMessage)}`;
+                const waBtn = document.getElementById('rsvp-wa-btn');
+                if (waBtn) {
+                    waBtn.setAttribute('href', waUrl);
+                    waBtn.classList.remove('hidden');
+                }
 
-        form.reset();
-        triggerToast("Ucapan Terkirim! Mengarahkan ke WhatsApp...");
-
-        // Open WhatsApp in a new tab
-        setTimeout(() => {
-            window.open(waUrl, '_blank');
-        }, 1200);
+                form.reset();
+                triggerToast("Konfirmasi & ucapan tersimpan! Klik tombol WhatsApp di bawah jika ingin mengirim pesan.");
+            } else {
+                const errData = await res.json();
+                triggerToast("Gagal menyimpan: " + (errData.error || "Kesalahan database"));
+            }
+        } catch (err) {
+            console.error("Failed to post wish to server", err);
+            triggerToast("Gagal terhubung ke database. Silakan coba lagi.");
+        }
     });
 </script>

@@ -10,11 +10,124 @@ import RSVP from '../components/RSVP.astro';
 import Gift from '../components/Gift.astro';
 import Footer from '../components/Footer.astro';
 import Toast from '../components/Toast.astro';
+import { supabase } from '../lib/supabase';
+
+// Fetch Settings from Supabase
+let settings: any = null;
+
+try {
+    const { data, error } = await supabase
+        .from('settings')
+        .select('*')
+        .eq('id', 1)
+        .single();
+    
+    if (!error && data) {
+        settings = data;
+    }
+} catch (e) {
+    console.error("Failed to load settings from Supabase", e);
+}
+
+// Fallback configuration if not found in db
+const defaultSettings = {
+    groom_name_short: 'Wira',
+    groom_name_full: 'Syafri Wira Wicaksana S.Tr.Kom, M.Kom',
+    groom_parents: 'Bpk. M. Syakrani & Ibu Asni Fariyana',
+    groom_instagram: 'syfrwrwcksn',
+    groom_photo: 'https://upload.wikimedia.org/wikipedia/commons/8/8d/Winter_white_hamster_sapphire.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original?auto=format&fit=crop&q=80&w=600',
+    bride_name_short: 'Ayu',
+    bride_name_full: 'Barqhadini Ayuningsih, S.T., M.T',
+    bride_parents: 'Bpk. Suyitno & Ibu Indah',
+    bride_instagram: 'barqhaayu_',
+    bride_photo: 'https://gregrichdvm.com/wp-content/uploads/2023/04/obese-sugar-glider.jpg?auto=format&fit=crop&q=80&w=600',
+    hero_bg: '/hero-bg.png',
+    countdown_target_date: '2027-01-05T08:00:00+07:00',
+    akad_date: 'Selasa, 5 Januari 2027',
+    akad_time: '08.00 WIB - Selesai',
+    akad_location_name: 'Ocean Garden Tepi Brantas Kepanjen',
+    akad_location_address: 'Sawah, Kedungpedaringan, Kec. Kepanjen, Kabupaten Malang, Jawa Timur 65163',
+    akad_start_iso: '20270105T010000Z',
+    akad_end_iso: '20270105T030000Z',
+    resepsi_date: 'Selasa, 5 Januari 2027',
+    resepsi_time: '11.00 WIB - 14.00 WIB',
+    resepsi_location_name: 'Ocean Garden Tepi Brantas Kepanjen',
+    resepsi_location_address: 'Sawah, Kedungpedaringan, Kec. Kepanjen, Kabupaten Malang, Jawa Timur 65163',
+    resepsi_start_iso: '20270105T040000Z',
+    resepsi_end_iso: '20270105T070000Z',
+    google_map_embed: 'https://maps.google.com/maps?q=Ocean%20Garden%20Tepi%20Brantas%20Kepanjen&t=&z=15&ie=UTF8&iwloc=&output=embed'
+};
+
+const activeSettings = settings || defaultSettings;
+
+// Helper to format UTC ISO string (20270105T010000Z) to Indonesian long date format
+function formatIndonesianDate(utcIso: string) {
+    if (!utcIso) return '';
+    try {
+        const formatted = utcIso.replace(
+            /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/,
+            '$1-$2-$3T$4:$5:$6Z'
+        );
+        const d = new Date(formatted);
+        const options: Intl.DateTimeFormatOptions = { 
+            weekday: 'long', 
+            day: 'numeric', 
+            month: 'long', 
+            year: 'numeric', 
+            timeZone: 'Asia/Jakarta' 
+        };
+        return d.toLocaleDateString('id-ID', options);
+    } catch (e) {
+        return '';
+    }
+}
+
+// Helper to format start & end UTC ISO strings to Indonesian time range format
+function formatIndonesianTimeRange(startUtcIso: string, endUtcIso: string) {
+    if (!startUtcIso) return '';
+    try {
+        const startFormatted = startUtcIso.replace(
+            /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/,
+            '$1-$2-$3T$4:$5:$6Z'
+        );
+        const dStart = new Date(startFormatted);
+        const startTimeStr = dStart.toLocaleTimeString('id-ID', { 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            timeZone: 'Asia/Jakarta' 
+        }).replace(':', '.');
+
+        if (!endUtcIso) {
+            return `${startTimeStr} WIB - Selesai`;
+        }
+
+        const endFormatted = endUtcIso.replace(
+            /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/,
+            '$1-$2-$3T$4:$5:$6Z'
+        );
+        const dEnd = new Date(endFormatted);
+        const endTimeStr = dEnd.toLocaleTimeString('id-ID', { 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            timeZone: 'Asia/Jakarta' 
+        }).replace(':', '.');
+
+        return `${startTimeStr} WIB - ${endTimeStr} WIB`;
+    } catch (e) {
+        return '';
+    }
+}
+
+// Auto-derive readable dates/times from UTC ISO calendar parameters
+activeSettings.akad_date = formatIndonesianDate(activeSettings.akad_start_iso) || activeSettings.akad_date;
+activeSettings.akad_time = formatIndonesianTimeRange(activeSettings.akad_start_iso, activeSettings.akad_end_iso) || activeSettings.akad_time;
+activeSettings.resepsi_date = formatIndonesianDate(activeSettings.resepsi_start_iso) || activeSettings.resepsi_date;
+activeSettings.resepsi_time = formatIndonesianTimeRange(activeSettings.resepsi_start_iso, activeSettings.resepsi_end_iso) || activeSettings.resepsi_time;
 ---
 
-<Layout title="The Wedding of Wira & Ayu">
+<Layout title={`The Wedding of ${activeSettings.groom_name_short} & ${activeSettings.bride_name_short}`}>
 	<!-- Invitation Gate / Cover Screen -->
-	<Cover />
+	<Cover settings={activeSettings} />
 
 	<!-- Background Music Controller -->
 	<MusicPlayer />
@@ -22,25 +135,25 @@ import Toast from '../components/Toast.astro';
 	<!-- Main Content Area (unlocked by opening the cover) -->
 	<div id="main-content" class="opacity-0 transition-opacity duration-1000 pointer-events-none">
 		<!-- Hero Section -->
-		<Hero />
+		<Hero settings={activeSettings} />
 
 		<!-- Quote Section -->
 		<Quote />
 
 		<!-- Groom and Bride Details -->
-		<GroomBride />
+		<GroomBride settings={activeSettings} />
 
 		<!-- Event Schedule Details -->
-		<EventDetails />
+		<EventDetails settings={activeSettings} />
 
 		<!-- RSVP and Guest Wishes -->
 		<RSVP />
 
 		<!-- Gift and Account Details -->
-		<Gift />
+		<Gift settings={activeSettings} />
 
 		<!-- Footer -->
-		<Footer />
+		<Footer settings={activeSettings} />
 	</div>
 
 	<!-- Custom Toast Notifications -->

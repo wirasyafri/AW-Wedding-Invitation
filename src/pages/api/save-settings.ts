@@ -1,0 +1,42 @@
+import type { APIRoute } from 'astro';
+import { supabase } from '../../lib/supabase';
+
+// POST api/save-settings: Update dynamic CMS fields
+export const POST: APIRoute = async ({ request }) => {
+  try {
+    const body = await request.json();
+    const { password, ...settingsData } = body;
+
+    const correctPassword = import.meta.env.ADMIN_PASSWORD;
+
+    if (!password || password !== correctPassword) {
+      return new Response(JSON.stringify({ error: 'Unauthorized: Password salah!' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Upsert key settings at id = 1
+    const { data, error } = await supabase
+      .from('settings')
+      .upsert({ id: 1, ...settingsData })
+      .select();
+
+    if (error) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    return new Response(JSON.stringify({ success: true, data: data[0] }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (err: any) {
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+};

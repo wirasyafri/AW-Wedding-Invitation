@@ -1,4 +1,20 @@
 ---
+const { settings } = Astro.props;
+
+// Construct Google Calendar URLs dynamically
+const getAkadCalUrl = () => {
+    const text = `Akad Nikah ${settings.groom_name_short} & ${settings.bride_name_short}`;
+    const dates = `${settings.akad_start_iso}/${settings.akad_end_iso}`;
+    const details = `Acara Akad Nikah ${settings.groom_name_full} & ${settings.bride_name_full} di ${settings.akad_location_name}.`;
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(text)}&dates=${dates}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(settings.akad_location_name)}`;
+};
+
+const getResepsiCalUrl = () => {
+    const text = `Resepsi Pernikahan ${settings.groom_name_short} & ${settings.bride_name_short}`;
+    const dates = `${settings.resepsi_start_iso}/${settings.resepsi_end_iso}`;
+    const details = `Acara Resepsi Pernikahan ${settings.groom_name_full} & ${settings.bride_name_full} di ${settings.resepsi_location_name}.`;
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(text)}&dates=${dates}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(settings.resepsi_location_name)}`;
+};
 ---
 <section class="py-24 px-4 bg-royal-cream">
     <div class="max-w-5xl mx-auto text-center">
@@ -11,9 +27,9 @@
                 <div class="absolute top-0 right-0 bg-gold text-stone-950 font-cinzel text-xs font-bold px-4 py-1 rounded-tr-2xl rounded-bl-lg">Sesi 1</div>
                 <div class="text-gold text-4xl mb-4"><i class="fa-solid fa-ring"></i></div>
                 <h3 class="font-cinzel font-bold text-2xl text-stone-900 mb-2">Akad Nikah</h3>
-                <p class="text-stone-600 text-sm mb-6">Selasa, 5 Januari 2027<br>Pukul 08.00 WIB - Selesai</p>
-                <div class="bg-stone-50 p-4 rounded-xl border border-stone-200 mb-6 text-sm text-stone-700">
-                    <strong>Ocean Garden Tepi Brantas Kepanjen</strong><br>Sawah, Kedungpedaringan, Kec. Kepanjen, Kabupaten Malang, Jawa Timur 65163
+                <p class="text-stone-600 text-sm mb-6">{settings.akad_date}<br>Pukul {settings.akad_time}</p>
+                <div class="bg-stone-50 p-4 rounded-xl border border-stone-200 mb-6 text-sm text-stone-700 text-left">
+                    <strong>{settings.akad_location_name}</strong><br>{settings.akad_location_address}
                 </div>
                 
                 <div class="relative inline-block w-full text-left">
@@ -21,10 +37,17 @@
                         <i class="fa-regular fa-calendar-plus mr-2"></i> Tambahkan ke Kalendar
                     </button>
                     <div class="cal-dropdown-menu absolute left-0 right-0 mt-2 z-20 hidden bg-stone-950 border border-gold/30 rounded-lg shadow-2xl p-1 overflow-hidden transition-all duration-300">
-                        <a href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=Akad+Nikah+Wira+%26+Ayu&dates=20270105T010000Z/20270105T030000Z&details=Acara+Akad+Nikah+Syafri+Wira+Wicaksana+%26+Barqhadini+Ayuningsih+di+Ocean+Garden+Tepi+Brantas+Kepanjen.&location=Ocean+Garden+Tepi+Brantas+Kepanjen" target="_blank" class="flex items-center gap-3 px-4 py-2.5 text-stone-300 hover:bg-gold hover:text-stone-950 rounded-md text-xs transition cursor-pointer">
+                        <a href={getAkadCalUrl()} target="_blank" class="flex items-center gap-3 px-4 py-2.5 text-stone-300 hover:bg-gold hover:text-stone-950 rounded-md text-xs transition cursor-pointer">
                             <i class="fa-brands fa-google w-4"></i> Google Calendar (Android)
                         </a>
-                        <button class="ical-btn w-full flex items-center gap-3 px-4 py-2.5 text-stone-300 hover:bg-gold hover:text-stone-950 rounded-md text-xs transition text-left cursor-pointer" data-title="Akad Nikah Wira & Ayu" data-start="20270105T010000Z" data-end="20270105T030000Z" data-desc="Acara Akad Nikah Syafri Wira Wicaksana & Barqhadini Ayuningsih">
+                        <button 
+                            class="ical-btn w-full flex items-center gap-3 px-4 py-2.5 text-stone-300 hover:bg-gold hover:text-stone-950 rounded-md text-xs transition text-left cursor-pointer" 
+                            data-title={`Akad Nikah ${settings.groom_name_short} & ${settings.bride_name_short}`}
+                            data-start={settings.akad_start_iso} 
+                            data-end={settings.akad_end_iso} 
+                            data-desc={`Acara Akad Nikah ${settings.groom_name_full} & ${settings.bride_name_full}`}
+                            data-loc={settings.akad_location_name}
+                        >
                             <i class="fa-solid fa-calendar-days w-4"></i> Apple Calendar (iOS)
                         </button>
                     </div>
@@ -36,9 +59,9 @@
                 <div class="absolute top-0 right-0 bg-gold text-stone-950 font-cinzel text-xs font-bold px-4 py-1 rounded-tr-2xl rounded-bl-lg">Sesi 2</div>
                 <div class="text-gold text-4xl mb-4"><i class="fa-solid fa-champagne-glasses"></i></div>
                 <h3 class="font-cinzel font-bold text-2xl text-stone-900 mb-2">Resepsi Pernikahan</h3>
-                <p class="text-stone-600 text-sm mb-6">Selasa, 5 Januari 2027<br>Pukul 11.00 WIB - 14.00 WIB</p>
-                <div class="bg-stone-50 p-4 rounded-xl border border-stone-200 mb-6 text-sm text-stone-700">
-                    <strong>Ocean Garden Tepi Brantas Kepanjen</strong><br>Sawah, Kedungpedaringan, Kec. Kepanjen, Kabupaten Malang, Jawa Timur 65163
+                <p class="text-stone-600 text-sm mb-6">{settings.resepsi_date}<br>Pukul {settings.resepsi_time}</p>
+                <div class="bg-stone-50 p-4 rounded-xl border border-stone-200 mb-6 text-sm text-stone-700 text-left">
+                    <strong>{settings.resepsi_location_name}</strong><br>{settings.resepsi_location_address}
                 </div>
                 
                 <div class="relative inline-block w-full text-left">
@@ -46,10 +69,17 @@
                         <i class="fa-regular fa-calendar-plus mr-2"></i> Tambahkan ke Kalendar
                     </button>
                     <div class="cal-dropdown-menu absolute left-0 right-0 mt-2 z-20 hidden bg-stone-950 border border-gold/30 rounded-lg shadow-2xl p-1 overflow-hidden transition-all duration-300">
-                        <a href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=Resepsi+Pernikahan+Wira+%26+Ayu&dates=20270105T040000Z/20270105T070000Z&details=Acara+Resepsi+Pernikahan+Syafri+Wira+Wicaksana+%26+Barqhadini+Ayuningsih+di+Ocean+Garden+Tepi+Brantas+Kepanjen.&location=Ocean+Garden+Tepi+Brantas+Kepanjen" target="_blank" class="flex items-center gap-3 px-4 py-2.5 text-stone-300 hover:bg-gold hover:text-stone-950 rounded-md text-xs transition cursor-pointer">
+                        <a href={getResepsiCalUrl()} target="_blank" class="flex items-center gap-3 px-4 py-2.5 text-stone-300 hover:bg-gold hover:text-stone-950 rounded-md text-xs transition cursor-pointer">
                             <i class="fa-brands fa-google w-4"></i> Google Calendar (Android)
                         </a>
-                        <button class="ical-btn w-full flex items-center gap-3 px-4 py-2.5 text-stone-300 hover:bg-gold hover:text-stone-950 rounded-md text-xs transition text-left cursor-pointer" data-title="Resepsi Pernikahan Wira & Ayu" data-start="20270105T040000Z" data-end="20270105T070000Z" data-desc="Acara Resepsi Pernikahan Syafri Wira Wicaksana & Barqhadini Ayuningsih">
+                        <button 
+                            class="ical-btn w-full flex items-center gap-3 px-4 py-2.5 text-stone-300 hover:bg-gold hover:text-stone-950 rounded-md text-xs transition text-left cursor-pointer" 
+                            data-title={`Resepsi Pernikahan ${settings.groom_name_short} & ${settings.bride_name_short}`}
+                            data-start={settings.resepsi_start_iso} 
+                            data-end={settings.resepsi_end_iso} 
+                            data-desc={`Acara Resepsi Pernikahan ${settings.groom_name_full} & ${settings.bride_name_full}`}
+                            data-loc={settings.resepsi_location_name}
+                        >
                             <i class="fa-solid fa-calendar-days w-4"></i> Apple Calendar (iOS)
                         </button>
                     </div>
@@ -59,10 +89,10 @@
 
         <!-- Google Maps Embed Section -->
         <div class="reveal max-w-5xl mx-auto bg-white p-6 rounded-2xl shadow-xl border border-gold/30">
-            <h3 class="font-cinzel font-bold text-xl text-stone-900 mb-4">Peta Lokasi Gedung</h3>
+            <h3 class="font-cinzel font-bold text-xl text-stone-900 mb-4">Peta Lokasi Acara</h3>
             <div class="w-full h-96 rounded-xl overflow-hidden shadow-inner border border-stone-200">
                 <iframe 
-                    src="https://maps.google.com/maps?q=Ocean%20Garden%20Tepi%20Brantas%20Kepanjen&t=&z=15&ie=UTF8&iwloc=&output=embed" 
+                    src={settings.google_map_embed} 
                     class="w-full h-full border-0" 
                     allowfullscreen="" 
                     loading="lazy" 
@@ -106,7 +136,7 @@
             const start = btn.getAttribute('data-start') || '20270105T010000Z';
             const end = btn.getAttribute('data-end') || '20270105T070000Z';
             const desc = btn.getAttribute('data-desc') || 'Undangan Pernikahan';
-            const loc = 'Ocean Garden Tepi Brantas Kepanjen';
+            const loc = btn.getAttribute('data-loc') || 'Ocean Garden Tepi Brantas Kepanjen';
 
             const icsContent = [
                 'BEGIN:VCALENDAR',

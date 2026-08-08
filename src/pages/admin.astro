@@ -1,0 +1,842 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { supabase } from '../lib/supabase';
+
+// Session variables
+let authenticated = false;
+let wishes: any[] = [];
+let errorMessage = '';
+let passwordVal = '';
+
+const adminPassword = import.meta.env.ADMIN_PASSWORD;
+
+// Default config
+const defaultSettings = {
+    groom_name_short: 'Wira',
+    groom_name_full: 'Syafri Wira Wicaksana S.Tr.Kom, M.Kom',
+    groom_parents: 'Bpk. M. Syakrani & Ibu Asni Fariyana',
+    groom_instagram: 'syfrwrwcksn',
+    groom_photo: 'https://upload.wikimedia.org/wikipedia/commons/8/8d/Winter_white_hamster_sapphire.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original?auto=format&fit=crop&q=80&w=600',
+    groom_photo_type: 'url',
+    bride_name_short: 'Ayu',
+    bride_name_full: 'Barqhadini Ayuningsih, S.T., M.T',
+    bride_parents: 'Bpk. Suyitno & Ibu Indah',
+    bride_instagram: 'barqhaayu_',
+    bride_photo: 'https://gregrichdvm.com/wp-content/uploads/2023/04/obese-sugar-glider.jpg?auto=format&fit=crop&q=80&w=600',
+    bride_photo_type: 'url',
+    hero_bg: '/hero-bg.png',
+    hero_bg_type: 'url',
+    countdown_target_date: '2027-01-05T08:00:00+07:00',
+    akad_date: 'Selasa, 5 Januari 2027',
+    akad_time: '08.00 WIB - Selesai',
+    akad_location_name: 'Ocean Garden Tepi Brantas Kepanjen',
+    akad_location_address: 'Sawah, Kedungpedaringan, Kec. Kepanjen, Kabupaten Malang, Jawa Timur 65163',
+    akad_start_iso: '20270105T010000Z',
+    akad_end_iso: '20270105T030000Z',
+    resepsi_date: 'Selasa, 5 Januari 2027',
+    resepsi_time: '11.00 WIB - 14.00 WIB',
+    resepsi_location_name: 'Ocean Garden Tepi Brantas Kepanjen',
+    resepsi_location_address: 'Sawah, Kedungpedaringan, Kec. Kepanjen, Kabupaten Malang, Jawa Timur 65163',
+    resepsi_start_iso: '20270105T040000Z',
+    resepsi_end_iso: '20270105T070000Z',
+    google_map_embed: 'https://maps.google.com/maps?q=Ocean%20Garden%20Tepi%20Brantas%20Kepanjen&t=&z=15&ie=UTF8&iwloc=&output=embed',
+    groom_bank_name: 'Bank BCA',
+    groom_bank_number: '1234 5678 90',
+    groom_bank_holder: 'Syafri Wira Wicaksana',
+    bride_bank_name: 'Bank BCA',
+    bride_bank_number: '0987654321',
+    bride_bank_holder: 'Barqhadini Ayuningsih'
+};
+
+let activeSettings = defaultSettings;
+
+// Handle authentication & moderation actions inside POST request
+if (Astro.request.method === 'POST') {
+    try {
+        const data = await Astro.request.formData();
+        passwordVal = (data.get('password') as string) || '';
+        const action = data.get('action') as string;
+        const wishId = data.get('wishId') as string;
+
+        if (passwordVal === adminPassword) {
+            authenticated = true;
+
+            // Execute moderation actions if provided
+            if (action === 'toggle' && wishId) {
+                const { data: currentWish, error: getError } = await supabase
+                    .from('wishes')
+                    .select('is_visible')
+                    .eq('id', wishId)
+                    .single();
+                if (getError) {
+                    errorMessage = 'Gagal memuat ucapan: ' + getError.message;
+                }
+                if (currentWish) {
+                    const { error: updateError } = await supabase
+                        .from('wishes')
+                        .update({ is_visible: !currentWish.is_visible })
+                        .eq('id', wishId);
+                    if (updateError) {
+                        errorMessage = 'Gagal memperbarui ucapan: ' + updateError.message;
+                    }
+                }
+            } else if (action === 'delete' && wishId) {
+                const { error: deleteError } = await supabase
+                    .from('wishes')
+                    .delete()
+                    .eq('id', wishId);
+                if (deleteError) {
+                    errorMessage = 'Gagal menghapus ucapan: ' + deleteError.message;
+                }
+            }
+
+            // Fetch wishes
+            const { data: dbWishes, error } = await supabase
+                .from('wishes')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (!error && dbWishes) {
+                wishes = dbWishes;
+            }
+
+            // Fetch settings
+            const { data: dbSettings } = await supabase
+                .from('settings')
+                .select('*')
+                .eq('id', 1)
+                .single();
+
+            if (dbSettings) {
+                activeSettings = { ...defaultSettings, ...dbSettings };
+            }
+        } else {
+            errorMessage = 'Password yang Anda masukkan salah!';
+        }
+    } catch (e: any) {
+        errorMessage = 'Terjadi kesalahan: ' + e.message;
+    }
+}
+
+// Calculate Summary Statistics
+const totalWishes = wishes.length;
+const attendingCount = wishes.filter(w => w.status === 'Hadir').length;
+const totalGuests = wishes.reduce((sum, w) => {
+    if (w.status !== 'Hadir') return sum;
+    const num = parseInt(w.guests) || 1;
+    return sum + num;
+}, 0);
+
+// Helper to format ISO target date to YYYY-MM-DDTHH:MM local format for input
+function formatToLocalDatetime(isoString: string) {
+    if (!isoString) return '';
+    try {
+        const d = new Date(isoString);
+        const offset = d.getTimezoneOffset();
+        const localTime = new Date(d.getTime() - (offset * 60 * 1000));
+        return localTime.toISOString().slice(0, 16);
+    } catch (e) {
+        return '';
+    }
+}
+
+// Helper to format UTC ISO string (20270105T010000Z) to YYYY-MM-DDTHH:MM local format
+function parseUtcIsoToLocal(utcIso: string) {
+    if (!utcIso) return '';
+    try {
+        const formatted = utcIso.replace(
+            /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/,
+            '$1-$2-$3T$4:$5:$6Z'
+        );
+        const d = new Date(formatted);
+        const offset = d.getTimezoneOffset();
+        const localTime = new Date(d.getTime() - (offset * 60 * 1000));
+        return localTime.toISOString().slice(0, 16);
+    } catch (e) {
+        return '';
+    }
+}
+---
+
+<Layout title="Moderator Panel - Wira & Ayu">
+    <div class="min-h-screen bg-stone-950 text-stone-100 flex flex-col justify-between py-12 px-4 select-none">
+        
+        {/* LOGIN SCREEN */}
+        {!authenticated && (
+            <div class="m-auto max-w-md w-full bg-stone-900 border-2 border-gold/40 rounded-2xl p-8 text-center shadow-2xl backdrop-blur-md">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gold/10 border border-gold/30 mb-6 text-gold text-2xl animate-float">
+                    <i class="fa-solid fa-lock"></i>
+                </div>
+                
+                <h1 class="font-cinzel text-xl text-gold mb-2 uppercase tracking-wider">Moderator Login</h1>
+                <p class="text-stone-400 text-xs mb-6">Masukkan kata sandi administrator untuk mengelola ucapan tamu undangan.</p>
+                
+                {errorMessage && (
+                    <div class="bg-red-500/10 border border-red-500/30 text-red-400 text-xs py-2.5 px-4 rounded-lg mb-6">
+                        {errorMessage}
+                    </div>
+                )}
+                
+                <form method="POST" class="space-y-4">
+                    <input 
+                        type="password" 
+                        name="password" 
+                        required 
+                        placeholder="Masukkan Kata Sandi" 
+                        class="w-full bg-stone-950 border border-stone-800 rounded-lg px-4 py-3 text-center text-stone-100 focus:outline-none focus:border-gold transition tracking-widest text-sm"
+                    />
+                    <button type="submit" class="w-full py-3 font-cinzel text-xs uppercase tracking-widest text-stone-950 font-bold rounded-lg bg-gradient-to-r from-gold-light via-gold to-gold-dark shadow-lg hover:opacity-95 transition cursor-pointer">
+                        Masuk Ke Dashboard
+                    </button>
+                </form>
+            </div>
+        )}
+
+        {/* DASHBOARD PANEL */}
+        {authenticated && (
+            <div class="max-w-6xl w-full mx-auto space-y-8">
+                {errorMessage && (
+                    <div class="bg-red-500/10 border border-red-500/30 text-red-400 text-xs py-3 px-4 rounded-lg">
+                        {errorMessage}
+                    </div>
+                )}
+                <div class="flex flex-col md:flex-row items-center justify-between border-b border-stone-800 pb-6 gap-4">
+                    <div class="text-center md:text-left">
+                        <h1 class="font-script text-4xl text-gold-light">{activeSettings.groom_name_short} & {activeSettings.bride_name_short}</h1>
+                        <p class="font-cinzel text-[10px] text-stone-500 uppercase tracking-widest mt-1">Guest Book Moderator Panel</p>
+                    </div>
+                    <form method="GET" class="text-right">
+                        <a href="/admin" class="font-cinzel text-[10px] uppercase tracking-wider text-stone-400 hover:text-gold border border-stone-800 hover:border-gold px-4 py-2 rounded-lg transition">
+                            <i class="fa-solid fa-arrow-right-from-bracket mr-1.5"></i> Keluar
+                        </a>
+                    </form>
+                </div>
+
+                {/* Tab buttons */}
+                <div class="flex gap-2 border-b border-stone-800/80 text-xs pb-px">
+                    <button id="tab-wishes" class="px-5 py-2.5 border-b-2 border-gold text-gold font-cinzel font-bold tracking-wider uppercase cursor-pointer transition">
+                        Daftar Ucapan
+                    </button>
+                    <button id="tab-settings" class="px-5 py-2.5 border-b-2 border-transparent text-stone-400 font-cinzel font-bold tracking-wider uppercase hover:text-stone-200 cursor-pointer transition">
+                        Pengaturan Undangan
+                    </button>
+                </div>
+
+                {/* TAB 1: GUESTBOOK WISHES */}
+                <div id="view-wishes" class="space-y-8">
+                    {/* Dashboard Stats */}
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                        <div class="bg-stone-900 border border-stone-800 rounded-xl p-5 shadow-xl text-center">
+                            <span class="text-stone-500 font-cinzel text-[10px] uppercase tracking-wider block mb-1">Total Ucapan</span>
+                            <span class="text-3xl font-bold text-gold font-mono">{totalWishes}</span>
+                        </div>
+                        <div class="bg-stone-900 border border-stone-800 rounded-xl p-5 shadow-xl text-center">
+                            <span class="text-stone-500 font-cinzel text-[10px] uppercase tracking-wider block mb-1">Konfirmasi Hadir</span>
+                            <span class="text-3xl font-bold text-emerald-400 font-mono">{attendingCount} <span class="text-xs text-stone-500 font-normal">Undangan</span></span>
+                        </div>
+                        <div class="bg-stone-900 border border-stone-800 rounded-xl p-5 shadow-xl text-center">
+                            <span class="text-stone-500 font-cinzel text-[10px] uppercase tracking-wider block mb-1">Total Estimasi Tamu</span>
+                            <span class="text-3xl font-bold text-gold-light font-mono">{totalGuests} <span class="text-xs text-stone-500 font-normal">Orang</span></span>
+                        </div>
+                    </div>
+
+                    {/* Guest List Grid */}
+                    <div class="bg-stone-900 border border-stone-800 rounded-xl shadow-2xl overflow-hidden">
+                        <div class="px-6 py-4 border-b border-stone-800 bg-stone-950 flex items-center justify-between">
+                            <h2 class="font-cinzel text-xs text-gold uppercase tracking-wider">Daftar Konfirmasi Kehadiran & Ucapan</h2>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="border-b border-stone-800 text-[10px] uppercase font-cinzel text-stone-500 tracking-wider bg-stone-950/40">
+                                        <th class="py-3 px-6">Nama Pengirim</th>
+                                        <th class="py-3 px-6 text-center">Kehadiran</th>
+                                        <th class="py-3 px-6 text-center">Tamu</th>
+                                        <th class="py-3 px-6">Ucapan & Doa</th>
+                                        <th class="py-3 px-6 text-center">Sukai</th>
+                                        <th class="py-3 px-6 text-center">Aksi Moderasi</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-stone-800/60 text-xs">
+                                    {wishes.map((wish) => (
+                                        <tr class={`transition-colors hover:bg-stone-800/20 ${!wish.is_visible ? 'opacity-60 bg-stone-950/20' : ''}`}>
+                                            <td class="py-4 px-6 font-bold text-stone-200">{wish.name}</td>
+                                            <td class="py-4 px-6 text-center">
+                                                <span class={`px-2 py-0.5 rounded text-[10px] border ${
+                                                    wish.status === 'Hadir' 
+                                                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                                                        : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                                }`}>
+                                                    {wish.status}
+                                                </span>
+                                            </td>
+                                            <td class="py-4 px-6 text-center font-mono text-stone-400">{wish.guests || '1 Orang'}</td>
+                                            <td class="py-4 px-6 text-stone-300 max-w-xs truncate" title={wish.message}>{wish.message}</td>
+                                            <td class="py-4 px-6 text-center font-mono text-rose-400">
+                                                <i class="fa-solid fa-heart text-[10px] mr-1"></i> {wish.likes || 0}
+                                            </td>
+                                            <td class="py-4 px-6 text-center">
+                                                <div class="inline-flex gap-2">
+                                                    <button 
+                                                        data-wish-id={wish.id}
+                                                        class={`wish-toggle-btn px-3 py-1.5 rounded text-[10px] font-cinzel tracking-wider uppercase font-bold cursor-pointer transition ${
+                                                            wish.is_visible 
+                                                                ? 'bg-stone-800 text-stone-400 hover:bg-amber-600 hover:text-stone-950' 
+                                                                : 'bg-amber-50 text-stone-950 hover:bg-amber-400'
+                                                        }`}
+                                                    >
+                                                        {wish.is_visible ? 'Sembunyikan' : 'Tampilkan'}
+                                                    </button>
+                                                    <button 
+                                                        data-wish-id={wish.id}
+                                                        data-wish-name={wish.name}
+                                                        class="wish-delete-btn px-3 py-1.5 rounded text-[10px] font-cinzel tracking-wider uppercase font-bold bg-red-950/40 text-red-400 border border-red-900/30 hover:bg-red-500 hover:text-stone-950 transition cursor-pointer"
+                                                    >
+                                                        Hapus
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {wishes.length === 0 && (
+                                        <tr>
+                                            <td colspan="6" class="py-8 text-center text-stone-500 font-cinzel">Belum ada ucapan tamu masuk.</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                {/* TAB 2: INVITATION SETTINGS (CMS) */}
+                <div id="view-settings" class="hidden">
+                    <form id="settings-form" class="space-y-8 bg-stone-900 border border-stone-800 rounded-xl p-8 shadow-2xl text-left">
+                        
+                        {/* Profile Section */}
+                        <div>
+                            <h2 class="font-cinzel text-xs text-gold uppercase tracking-wider border-b border-stone-800 pb-3 mb-6">Pengaturan Profil Mempelai</h2>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                {/* Groom */}
+                                <div class="space-y-4">
+                                    <h3 class="text-stone-300 font-bold text-sm">Mempelai Pria</h3>
+                                    <div>
+                                        <label class="block text-stone-500 text-[10px] uppercase tracking-wider mb-1">Nama Panggilan</label>
+                                        <input type="text" name="groom_name_short" value={activeSettings.groom_name_short} class="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 text-xs focus:outline-none focus:border-gold" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-stone-500 text-[10px] uppercase tracking-wider mb-1">Nama Lengkap & Gelar</label>
+                                        <input type="text" name="groom_name_full" value={activeSettings.groom_name_full} class="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 text-xs focus:outline-none focus:border-gold" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-stone-500 text-[10px] uppercase tracking-wider mb-1">Nama Orang Tua</label>
+                                        <input type="text" name="groom_parents" value={activeSettings.groom_parents} class="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 text-xs focus:outline-none focus:border-gold" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-stone-500 text-[10px] uppercase tracking-wider mb-1">Username Instagram (tanpa @)</label>
+                                        <input type="text" name="groom_instagram" value={activeSettings.groom_instagram} class="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 text-xs focus:outline-none focus:border-gold" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-stone-500 text-[10px] uppercase tracking-wider mb-2">Foto Mempelai Pria</label>
+                                        
+                                        {/* Image Preview container */}
+                                        <div class="mb-3 flex items-center gap-3">
+                                            <div class="relative w-20 h-20 bg-stone-950 rounded-lg border border-stone-800 overflow-hidden flex items-center justify-center">
+                                                <img id="groom_photo_preview" src={activeSettings.groom_photo} class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.style.display='block'; this.nextElementSibling.style.display='none';" />
+                                                <div class="hidden w-full h-full items-center justify-center text-stone-600 text-[9px] uppercase font-cinzel font-bold">No Image</div>
+                                            </div>
+                                        </div>
+
+                                        <div class="flex gap-4 mb-2 text-[10px] text-stone-400">
+                                            <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                                                <input type="radio" name="groom_photo_type" value="url" checked={activeSettings.groom_photo_type === 'url'} class="accent-gold" /> Gunakan URL Link
+                                            </label>
+                                            <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                                                <input type="radio" name="groom_photo_type" value="file" checked={activeSettings.groom_photo_type === 'file'} class="accent-gold" /> Unggah File Foto
+                                            </label>
+                                        </div>
+                                        <div id="groom_photo_url_wrapper" class={activeSettings.groom_photo_type === 'file' ? 'hidden' : ''}>
+                                            <input type="text" id="groom_photo" name="groom_photo" value={activeSettings.groom_photo} class="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 text-xs focus:outline-none focus:border-gold" placeholder="Masukkan URL Foto" />
+                                        </div>
+                                        <div id="groom_photo_file_wrapper" class={activeSettings.groom_photo_type === 'url' ? 'hidden' : ''}>
+                                            <label class="w-full flex items-center justify-center py-2.5 bg-stone-950 border border-stone-800 border-dashed hover:border-gold rounded text-stone-400 text-xs cursor-pointer transition">
+                                                <i class="fa-solid fa-cloud-arrow-up mr-2"></i> Pilih & Unggah Foto
+                                                <input type="file" id="groom_photo_file" accept="image/*" class="hidden" />
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Bride */}
+                                <div class="space-y-4">
+                                    <h3 class="text-stone-300 font-bold text-sm">Mempelai Wanita</h3>
+                                    <div>
+                                        <label class="block text-stone-500 text-[10px] uppercase tracking-wider mb-1">Nama Panggilan</label>
+                                        <input type="text" name="bride_name_short" value={activeSettings.bride_name_short} class="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 text-xs focus:outline-none focus:border-gold" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-stone-500 text-[10px] uppercase tracking-wider mb-1">Nama Lengkap & Gelar</label>
+                                        <input type="text" name="bride_name_full" value={activeSettings.bride_name_full} class="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 text-xs focus:outline-none focus:border-gold" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-stone-500 text-[10px] uppercase tracking-wider mb-1">Nama Orang Tua</label>
+                                        <input type="text" name="bride_parents" value={activeSettings.bride_parents} class="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 text-xs focus:outline-none focus:border-gold" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-stone-500 text-[10px] uppercase tracking-wider mb-1">Username Instagram (tanpa @)</label>
+                                        <input type="text" name="bride_instagram" value={activeSettings.bride_instagram} class="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 text-xs focus:outline-none focus:border-gold" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-stone-500 text-[10px] uppercase tracking-wider mb-2">Foto Mempelai Wanita</label>
+                                        
+                                        {/* Image Preview container */}
+                                        <div class="mb-3 flex items-center gap-3">
+                                            <div class="relative w-20 h-20 bg-stone-950 rounded-lg border border-stone-800 overflow-hidden flex items-center justify-center">
+                                                <img id="bride_photo_preview" src={activeSettings.bride_photo} class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.style.display='block'; this.nextElementSibling.style.display='none';" />
+                                                <div class="hidden w-full h-full items-center justify-center text-stone-600 text-[9px] uppercase font-cinzel font-bold">No Image</div>
+                                            </div>
+                                        </div>
+
+                                        <div class="flex gap-4 mb-2 text-[10px] text-stone-400">
+                                            <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                                                <input type="radio" name="bride_photo_type" value="url" checked={activeSettings.bride_photo_type === 'url'} class="accent-gold" /> Gunakan URL Link
+                                            </label>
+                                            <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                                                <input type="radio" name="bride_photo_type" value="file" checked={activeSettings.bride_photo_type === 'file'} class="accent-gold" /> Unggah File Foto
+                                            </label>
+                                        </div>
+                                        <div id="bride_photo_url_wrapper" class={activeSettings.bride_photo_type === 'file' ? 'hidden' : ''}>
+                                            <input type="text" id="bride_photo" name="bride_photo" value={activeSettings.bride_photo} class="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 text-xs focus:outline-none focus:border-gold" placeholder="Masukkan URL Foto" />
+                                        </div>
+                                        <div id="bride_photo_file_wrapper" class={activeSettings.bride_photo_type === 'url' ? 'hidden' : ''}>
+                                            <label class="w-full flex items-center justify-center py-2.5 bg-stone-950 border border-stone-800 border-dashed hover:border-gold rounded text-stone-400 text-xs cursor-pointer transition">
+                                                <i class="fa-solid fa-cloud-arrow-up mr-2"></i> Pilih & Unggah Foto
+                                                <input type="file" id="bride_photo_file" accept="image/*" class="hidden" />
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Events Section */}
+                        <div class="pt-6">
+                            <h2 class="font-cinzel text-xs text-gold uppercase tracking-wider border-b border-stone-800 pb-3 mb-6">Pengaturan Jadwal & Lokasi</h2>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                {/* Akad */}
+                                <div class="space-y-4">
+                                    <h3 class="text-stone-300 font-bold text-sm">Akad Nikah</h3>
+                                    <div>
+                                        <label class="block text-stone-500 text-[10px] uppercase tracking-wider mb-1">Nama Tempat Lokasi</label>
+                                        <input type="text" name="akad_location_name" value={activeSettings.akad_location_name} class="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 text-xs focus:outline-none focus:border-gold" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-stone-500 text-[10px] uppercase tracking-wider mb-1">Alamat Lengkap</label>
+                                        <textarea name="akad_location_address" rows="2" class="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 text-xs focus:outline-none focus:border-gold">{activeSettings.akad_location_address}</textarea>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-stone-500 text-[9px] uppercase tracking-wider mb-1">Waktu Mulai Akad</label>
+                                            <input type="datetime-local" id="akad_start_iso" name="akad_start_iso" value={parseUtcIsoToLocal(activeSettings.akad_start_iso)} class="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 text-xs focus:outline-none focus:border-gold" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-stone-500 text-[9px] uppercase tracking-wider mb-1">Waktu Selesai Akad</label>
+                                            <input type="datetime-local" id="akad_end_iso" name="akad_end_iso" value={parseUtcIsoToLocal(activeSettings.akad_end_iso)} class="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 text-xs focus:outline-none focus:border-gold" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Resepsi */}
+                                <div class="space-y-4">
+                                    <h3 class="text-stone-300 font-bold text-sm">Resepsi Pernikahan</h3>
+                                    <div>
+                                        <label class="block text-stone-500 text-[10px] uppercase tracking-wider mb-1">Nama Tempat Lokasi</label>
+                                        <input type="text" name="resepsi_location_name" value={activeSettings.resepsi_location_name} class="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 text-xs focus:outline-none focus:border-gold" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-stone-500 text-[10px] uppercase tracking-wider mb-1">Alamat Lengkap</label>
+                                        <textarea name="resepsi_location_address" rows="2" class="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 text-xs focus:outline-none focus:border-gold">{activeSettings.resepsi_location_address}</textarea>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-stone-500 text-[9px] uppercase tracking-wider mb-1">Waktu Mulai Resepsi</label>
+                                            <input type="datetime-local" id="resepsi_start_iso" name="resepsi_start_iso" value={parseUtcIsoToLocal(activeSettings.resepsi_start_iso)} class="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 text-xs focus:outline-none focus:border-gold" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-stone-500 text-[9px] uppercase tracking-wider mb-1">Waktu Selesai Resepsi</label>
+                                            <input type="datetime-local" id="resepsi_end_iso" name="resepsi_end_iso" value={parseUtcIsoToLocal(activeSettings.resepsi_end_iso)} class="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 text-xs focus:outline-none focus:border-gold" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Gift Section */}
+                        <div class="pt-6">
+                            <h2 class="font-cinzel text-xs text-gold uppercase tracking-wider border-b border-stone-800 pb-3 mb-6">Pengaturan Hadiah / Rekening</h2>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                {/* Groom Bank */}
+                                <div class="space-y-4">
+                                    <h3 class="text-stone-300 font-bold text-sm">Rekening Mempelai Pria</h3>
+                                    <div>
+                                        <label class="block text-stone-500 text-[10px] uppercase tracking-wider mb-1">Nama Bank / E-Wallet</label>
+                                        <input type="text" name="groom_bank_name" value={activeSettings.groom_bank_name} class="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 text-xs focus:outline-none focus:border-gold" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-stone-500 text-[10px] uppercase tracking-wider mb-1">Nomor Rekening</label>
+                                        <input type="text" name="groom_bank_number" value={activeSettings.groom_bank_number} class="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 text-xs focus:outline-none focus:border-gold" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-stone-500 text-[10px] uppercase tracking-wider mb-1">Nama Pemilik Rekening</label>
+                                        <input type="text" name="groom_bank_holder" value={activeSettings.groom_bank_holder} class="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 text-xs focus:outline-none focus:border-gold" />
+                                    </div>
+                                </div>
+
+                                {/* Bride Bank */}
+                                <div class="space-y-4">
+                                    <h3 class="text-stone-300 font-bold text-sm">Rekening Mempelai Wanita</h3>
+                                    <div>
+                                        <label class="block text-stone-500 text-[10px] uppercase tracking-wider mb-1">Nama Bank / E-Wallet</label>
+                                        <input type="text" name="bride_bank_name" value={activeSettings.bride_bank_name} class="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 text-xs focus:outline-none focus:border-gold" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-stone-500 text-[10px] uppercase tracking-wider mb-1">Nomor Rekening</label>
+                                        <input type="text" name="bride_bank_number" value={activeSettings.bride_bank_number} class="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 text-xs focus:outline-none focus:border-gold" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-stone-500 text-[10px] uppercase tracking-wider mb-1">Nama Pemilik Rekening</label>
+                                        <input type="text" name="bride_bank_holder" value={activeSettings.bride_bank_holder} class="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 text-xs focus:outline-none focus:border-gold" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Timing and Visual Section */}
+                        <div class="pt-6">
+                            <h2 class="font-cinzel text-xs text-gold uppercase tracking-wider border-b border-stone-800 pb-3 mb-6">Pengaturan Visual & Map</h2>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div>
+                                    <label class="block text-stone-500 text-[10px] uppercase tracking-wider mb-2">Foto Background Hero</label>
+                                    
+                                    {/* Image Preview container */}
+                                    <div class="mb-3 flex items-center gap-3">
+                                        <div class="relative w-36 h-20 bg-stone-950 rounded-lg border border-stone-800 overflow-hidden flex items-center justify-center">
+                                            <img id="hero_bg_preview" src={activeSettings.hero_bg} class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.style.display='block'; this.nextElementSibling.style.display='none';" />
+                                            <div class="hidden w-full h-full items-center justify-center text-stone-600 text-[9px] uppercase font-cinzel font-bold">No Image</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex gap-4 mb-2 text-[10px] text-stone-400">
+                                        <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                                            <input type="radio" name="hero_bg_type" value="url" checked={activeSettings.hero_bg_type === 'url'} class="accent-gold" /> Gunakan URL Link
+                                        </label>
+                                        <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                                            <input type="radio" name="hero_bg_type" value="file" checked={activeSettings.hero_bg_type === 'file'} class="accent-gold" /> Unggah File Foto
+                                        </label>
+                                    </div>
+                                    <div id="hero_bg_url_wrapper" class={activeSettings.hero_bg_type === 'file' ? 'hidden' : ''}>
+                                        <input type="text" id="hero_bg" name="hero_bg" value={activeSettings.hero_bg} class="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 text-xs focus:outline-none focus:border-gold" placeholder="Masukkan URL Foto / Path" />
+                                    </div>
+                                    <div id="hero_bg_file_wrapper" class={activeSettings.hero_bg_type === 'url' ? 'hidden' : ''}>
+                                        <label class="w-full flex items-center justify-center py-2.5 bg-stone-950 border border-stone-800 border-dashed hover:border-gold rounded text-stone-400 text-xs cursor-pointer transition">
+                                            <i class="fa-solid fa-cloud-arrow-up mr-2"></i> Pilih & Unggah Foto
+                                            <input type="file" id="hero_bg_file" accept="image/*" class="hidden" />
+                                        </label>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-stone-500 text-[10px] uppercase tracking-wider mb-1">Waktu Target Hitung Mundur</label>
+                                    <input type="datetime-local" id="countdown_target_date" name="countdown_target_date" value={formatToLocalDatetime(activeSettings.countdown_target_date)} class="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 text-xs focus:outline-none focus:border-gold" />
+                                </div>
+                                <div>
+                                    <label class="block text-stone-500 text-[10px] uppercase tracking-wider mb-1">URL Iframe Embed Google Maps</label>
+                                    <input type="text" name="google_map_embed" value={activeSettings.google_map_embed} class="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 text-xs focus:outline-none focus:border-gold" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pt-6 border-t border-stone-800/80">
+                            <button type="submit" class="w-full md:w-auto px-8 py-3.5 font-cinzel text-xs uppercase tracking-widest text-stone-950 font-bold rounded-lg bg-gradient-to-r from-gold-light via-gold to-gold-dark shadow-lg hover:opacity-95 transition cursor-pointer">
+                                Simpan Pengaturan Undangan
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                {/* Master Action Form */}
+                <form id="action-form" method="POST" style="display:none;">
+                    <input type="hidden" name="password" value={passwordVal} />
+                    <input type="hidden" name="action" id="action-type" />
+                    <input type="hidden" name="wishId" id="action-id" />
+                </form>
+            </div>
+        )}
+
+        <footer class="text-center text-[10px] text-stone-700 font-cinzel mt-12 uppercase tracking-widest">
+            AW Wedding Invitation Dashboard Panel
+        </footer>
+    </div>
+
+    {/* Toast notification component for admin success feedbacks */}
+    <div id="admin-toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gold text-stone-950 font-cinzel text-xs font-bold py-3 px-6 rounded-lg shadow-2xl opacity-0 transform translate-y-0 transition-all duration-300 z-50 pointer-events-none">
+        Pengaturan berhasil disimpan!
+    </div>
+</Layout>
+
+<script is:inline>
+    // Tab toggle logic
+    const btnWishes = document.getElementById('tab-wishes');
+    const btnSettings = document.getElementById('tab-settings');
+    const viewWishes = document.getElementById('view-wishes');
+    const viewSettings = document.getElementById('view-settings');
+
+    btnWishes?.addEventListener('click', () => {
+        btnWishes.classList.add('border-gold', 'text-gold');
+        btnWishes.classList.remove('border-transparent', 'text-stone-400');
+        btnSettings?.classList.remove('border-gold', 'text-gold');
+        btnSettings?.classList.add('border-transparent', 'text-stone-400');
+
+        viewWishes?.classList.remove('hidden');
+        viewSettings?.classList.add('hidden');
+    });
+
+    btnSettings?.addEventListener('click', () => {
+        btnSettings.classList.add('border-gold', 'text-gold');
+        btnSettings.classList.remove('border-transparent', 'text-stone-400');
+        btnWishes?.classList.remove('border-gold', 'text-gold');
+        btnWishes?.classList.add('border-transparent', 'text-stone-400');
+
+        viewSettings?.classList.remove('hidden');
+        viewWishes?.classList.add('hidden');
+    });
+
+    // Client-side helper function to submit moderation actions
+    function performAction(action, id) {
+        const actionType = document.getElementById('action-type');
+        const actionId = document.getElementById('action-id');
+        const form = document.getElementById('action-form');
+        
+        if (actionType && actionId && form) {
+            actionType.value = action;
+            actionId.value = id;
+            form.submit();
+        }
+    }
+
+    // Toggle wish visibility action handler
+    document.querySelectorAll('.wish-toggle-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-wish-id');
+            performAction('toggle', id);
+        });
+    });
+
+    // Delete wish action handler
+    document.querySelectorAll('.wish-delete-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-wish-id');
+            const name = btn.getAttribute('data-wish-name') || 'tamu';
+            if (confirm(`Hapus ucapan dari ${name}?`)) {
+                performAction('delete', id);
+            }
+        });
+    });
+
+    // Radio button input toggle logic
+    const setupImageToggle = (radioName, urlWrapperId, fileWrapperId) => {
+        const radios = document.getElementsByName(radioName);
+        const urlWrapper = document.getElementById(urlWrapperId);
+        const fileWrapper = document.getElementById(fileWrapperId);
+
+        radios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                if (e.target.value === 'url') {
+                    urlWrapper?.classList.remove('hidden');
+                    fileWrapper?.classList.add('hidden');
+                } else {
+                    urlWrapper?.classList.add('hidden');
+                    fileWrapper?.classList.remove('hidden');
+                }
+            });
+        });
+    };
+
+    setupImageToggle('groom_photo_type', 'groom_photo_url_wrapper', 'groom_photo_file_wrapper');
+    setupImageToggle('bride_photo_type', 'bride_photo_url_wrapper', 'bride_photo_file_wrapper');
+    setupImageToggle('hero_bg_type', 'hero_bg_url_wrapper', 'hero_bg_file_wrapper');
+
+    // Update preview helper
+    const updatePreview = (inputId, previewId) => {
+        const input = document.getElementById(inputId);
+        const preview = document.getElementById(previewId);
+        if (input && preview) {
+            preview.src = input.value;
+            preview.style.display = input.value ? 'block' : 'none';
+            if (preview.nextElementSibling) {
+                preview.nextElementSibling.style.display = input.value ? 'none' : 'flex';
+            }
+        }
+    };
+
+    // Trigger preview update when URL inputs change
+    document.getElementById('groom_photo')?.addEventListener('input', () => updatePreview('groom_photo', 'groom_photo_preview'));
+    document.getElementById('bride_photo')?.addEventListener('input', () => updatePreview('bride_photo', 'bride_photo_preview'));
+    document.getElementById('hero_bg')?.addEventListener('input', () => updatePreview('hero_bg', 'hero_bg_preview'));
+
+    // Handle image file uploads to Supabase Storage via backend upload API
+    const handleFileUpload = async (fileInputId, textInputId) => {
+        const fileInput = document.getElementById(fileInputId);
+        const textInput = document.getElementById(textInputId);
+        if (!fileInput || !fileInput.files || fileInput.files.length === 0 || !textInput) return;
+
+        const file = fileInput.files[0];
+        const originalVal = textInput.value;
+        textInput.value = "Mengunggah berkas...";
+
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('fileName', fileName);
+            formData.append('oldFileUrl', originalVal);
+            const masterPass = document.getElementsByName('password')[0]?.value || '';
+            formData.append('password', masterPass);
+
+            const res = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (res.ok) {
+                const result = await res.json();
+                textInput.value = result.publicUrl;
+                
+                // Update the preview immediately
+                const previewId = textInputId + '_preview';
+                updatePreview(textInputId, previewId);
+
+                triggerAdminToast("Berkas foto berhasil diunggah! Klik Simpan di bawah untuk menyimpan.");
+            } else {
+                const err = await res.json();
+                alert("Gagal mengunggah: " + (err.error || "Kesalahan server"));
+                textInput.value = originalVal;
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Gagal mengunggah foto. Pastikan Anda telah membuat storage bucket 'photos' di Supabase.");
+            textInput.value = originalVal;
+        }
+    };
+
+    document.getElementById('groom_photo_file')?.addEventListener('change', () => handleFileUpload('groom_photo_file', 'groom_photo'));
+    document.getElementById('bride_photo_file')?.addEventListener('change', () => handleFileUpload('bride_photo_file', 'bride_photo'));
+    document.getElementById('hero_bg_file')?.addEventListener('change', () => handleFileUpload('hero_bg_file', 'hero_bg'));
+
+    // Client-side settings form handler
+    const settingsForm = document.getElementById('settings-form');
+    settingsForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        // Collect form data
+        const formData = new FormData(settingsForm);
+        const data = {};
+        formData.forEach((val, key) => {
+            data[key] = val;
+        });
+
+        // Helper to convert picker datetime-local value to ISO UTC string
+        const convertToUtcIso = (localVal) => {
+            if (!localVal) return '';
+            try {
+                const d = new Date(localVal);
+                if (isNaN(d.getTime())) return '';
+                return d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+            } catch (err) {
+                return '';
+            }
+        };
+
+        if (data['countdown_target_date']) {
+            try {
+                const d = new Date(data['countdown_target_date']);
+                if (!isNaN(d.getTime())) {
+                    data['countdown_target_date'] = d.toISOString();
+                } else {
+                    data['countdown_target_date'] = '';
+                }
+            } catch (err) {
+                data['countdown_target_date'] = '';
+            }
+        }
+        if (data['akad_start_iso']) {
+            data['akad_start_iso'] = convertToUtcIso(data['akad_start_iso']);
+        }
+        if (data['akad_end_iso']) {
+            data['akad_end_iso'] = convertToUtcIso(data['akad_end_iso']);
+        }
+        if (data['resepsi_start_iso']) {
+            data['resepsi_start_iso'] = convertToUtcIso(data['resepsi_start_iso']);
+        }
+        if (data['resepsi_end_iso']) {
+            data['resepsi_end_iso'] = convertToUtcIso(data['resepsi_end_iso']);
+        }
+
+        // Add the password from the master action form
+        const masterPass = document.getElementsByName('password')[0]?.value || '';
+        data['password'] = masterPass;
+
+        // Show loading status
+        const submitBtn = settingsForm.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.innerText = "MENYIMPAN...";
+
+        try {
+            const res = await fetch('/api/save-settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (res.ok) {
+                triggerAdminToast("Pengaturan berhasil disimpan!");
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                const err = await res.json();
+                alert("Gagal menyimpan: " + (err.error || "Kesalahan server"));
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Gagal terhubung ke server.");
+        } finally {
+            if (submitBtn) submitBtn.innerText = "SIMPAN PENGATURAN UNDANGAN";
+        }
+    });
+
+    function triggerAdminToast(text) {
+        const toast = document.getElementById('admin-toast');
+        if (toast) {
+            toast.innerText = text;
+            toast.style.opacity = '1';
+            toast.style.transform = 'translate(-50%, -20px)';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translate(-50%, 0)';
+            }, 3000);
+        }
+    }
+
+    // Automatically trigger browser's calendar/time picker popup when clicking anywhere in the input
+    document.querySelectorAll('input[type="datetime-local"]').forEach(input => {
+        input.addEventListener('click', () => {
+            try {
+                input.showPicker();
+            } catch (err) {
+                console.warn('showPicker not supported on this browser:', err);
+            }
+        });
+    });
+</script>
