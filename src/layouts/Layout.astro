@@ -37,5 +37,22 @@ const {
 	</head>
 	<body class="bg-royal-cream font-sans text-stone-800 antialiased overflow-x-hidden selection:bg-gold/30 selection:text-gold-dark">
 		<slot />
+
+		<script>
+			// Intersection Observer for scroll reveal animations
+			const observer = new IntersectionObserver((entries) => {
+				entries.forEach(entry => {
+					if (entry.isIntersecting) {
+						entry.target.classList.add('reveal-active');
+					}
+				});
+			}, {
+				threshold: 0.05,
+				rootMargin: "0px 0px -50px 0px"
+			});
+
+			// Select and observe all elements with .reveal class
+			document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+		</script>
 	</body>
 </html>

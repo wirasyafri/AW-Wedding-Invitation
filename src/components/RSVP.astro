@@ -1,7 +1,7 @@
 ---
 ---
 <section class="py-24 px-4 bg-stone-900 text-stone-100">
-    <div class="max-w-3xl mx-auto">
+    <div class="max-w-3xl mx-auto reveal">
         <div class="text-center mb-12">
             <span class="font-cinzel uppercase tracking-[0.3em] text-xs text-gold block mb-2">Kehadiran & Doa</span>
             <h2 class="font-script text-5xl md:text-6xl text-gold-light mb-4">RSVP & Ucapan</h2>
@@ -26,6 +26,7 @@
                     <select id="rsvp-guests" class="w-full bg-stone-900 border border-stone-800 rounded-lg px-4 py-3 text-stone-100 focus:outline-none focus:border-gold transition">
                         <option value="1 Orang">1 Orang</option>
                         <option value="2 Orang">2 Orang</option>
+                        <option value="Lebih dari 2 Orang">Lebih dari 2 Orang</option>
                     </select>
                 </div>
             </div>
@@ -42,17 +43,10 @@
         <div class="bg-stone-950/80 p-8 rounded-2xl border border-gold/30 shadow-2xl">
             <h3 class="font-cinzel text-lg text-gold mb-6 border-b border-stone-800 pb-3 flex items-center justify-between">
                 <span>Daftar Ucapan Tamu</span>
-                <span id="wishes-count" class="text-xs bg-gold/10 text-gold px-3 py-1 rounded-full border border-gold/30">3 Ucapan</span>
+                <span id="wishes-count" class="text-xs bg-gold/10 text-gold px-3 py-1 rounded-full border border-gold/30">0 Ucapan</span>
             </h3>
             <div id="wishes-list" class="space-y-4 max-h-96 overflow-y-auto pr-2">
-                <!-- Fallback comments placeholder while scripts load -->
-                <div class="bg-stone-900/80 p-4 rounded-xl border border-stone-800">
-                    <div class="flex items-center justify-between mb-1">
-                        <h4 class="font-bold text-gold text-sm">Bpk. H. Ahmad & Keluarga</h4>
-                        <span class="text-[10px] text-stone-400 bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20">Hadir</span>
-                    </div>
-                    <p class="text-stone-300 text-xs leading-relaxed">Barakallahu lakuma wa baraka 'alaykuma wa jama'a bainakuma fi khair. Semoga menjadi keluarga sakinah, mawaddah, warahmah!</p>
-                </div>
+                <!-- Comments rendered by JS -->
             </div>
         </div>
     </div>
@@ -63,23 +57,35 @@
         name: string;
         status: string;
         message: string;
+        timestamp: number;
+        likes: number;
+        guests: string;
     }
 
     const defaultWishes: Wish[] = [
         {
             name: "Bpk. Pitak & Keluarga",
             status: "Hadir",
-            message: "Barakallahu lakuma wa baraka 'alaykuma wa jama'a bainakuma fi khair. Semoga menjadi keluarga sakinah, mawaddah, warahmah!"
+            message: "Barakallahu lakuma wa baraka 'alaykuma wa jama'a bainakuma fi khair. Semoga menjadi keluarga sakinah, mawaddah, warahmah!",
+            timestamp: Date.now() - 3 * 3600000,
+            likes: 5,
+            guests: "2 Orang"
         },
         {
             name: "Mujaer & Keluarga",
             status: "Hadir",
-            message: "Selamat menempuh hidup baru Wira & Ayu! Lancar sampai hari H dan bahagia selalu selamanya."
+            message: "Selamat menempuh hidup baru Wira & Ayu! Lancar sampai hari H dan bahagia selalu selamanya.",
+            timestamp: Date.now() - 10 * 3600000,
+            likes: 3,
+            guests: "2 Orang"
         },
         {
             name: "Koceng Jukir Jakarta",
             status: "Berhalangan",
-            message: "Mohon maaf berhalangan hadir karena ada tugas luar kota. Doa terbaik menyertai pernikahan kalian berdua!"
+            message: "Mohon maaf berhalangan hadir karena ada tugas luar kota. Doa terbaik menyertai pernikahan kalian berdua!",
+            timestamp: Date.now() - 24 * 3600000,
+            likes: 1,
+            guests: "1 Orang"
         }
     ];
 
@@ -100,6 +106,18 @@
                 toast.style.transform = 'translate(-50%, 0)';
             }, 3000);
         }
+    }
+
+    function getRelativeTime(timestamp: number) {
+        if (!timestamp) return 'Baru saja';
+        const diff = Date.now() - timestamp;
+        const mins = Math.floor(diff / 60000);
+        if (mins < 1) return 'Baru saja';
+        const hours = Math.floor(mins / 60);
+        if (hours < 1) return `${mins} menit yang lalu`;
+        const days = Math.floor(hours / 24);
+        if (days < 1) return `${hours} jam yang lalu`;
+        return `${days} hari yang lalu`;
     }
 
     function loadWishes(): Wish[] {
@@ -132,15 +150,41 @@
                 : 'bg-amber-500/10 text-amber-400 border-amber-500/20';
 
             return `
-                <div class="bg-stone-900/80 p-4 rounded-xl border border-stone-800">
-                    <div class="flex items-center justify-between mb-1">
-                        <h4 class="font-bold text-gold text-sm">${escapeHTML(wish.name)}</h4>
-                        <span class="text-[10px] ${badgeClass} px-2 py-0.5 rounded border">${wish.status}</span>
+                <div class="bg-stone-900/80 p-4 rounded-xl border border-stone-800 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <h4 class="font-bold text-gold text-sm">${escapeHTML(wish.name)}</h4>
+                            <span class="text-[10px] ${badgeClass} px-2 py-0.5 rounded border">${wish.status}</span>
+                        </div>
+                        <p class="text-stone-300 text-xs leading-relaxed">${escapeHTML(wish.message)}</p>
                     </div>
-                    <p class="text-stone-300 text-xs leading-relaxed">${escapeHTML(wish.message)}</p>
+                    <div class="flex items-center justify-between mt-3 pt-2 border-t border-stone-800/40">
+                        <span class="text-[10px] text-stone-500">${getRelativeTime(wish.timestamp)}</span>
+                        <button class="like-btn flex items-center gap-1.5 text-stone-400 hover:text-rose-500 text-xs font-cinzel transition cursor-pointer" data-id="${wish.timestamp}">
+                            <i class="fa-solid fa-heart text-[10px] text-stone-500 hover:text-rose-500 transition-colors"></i>
+                            <span>${wish.likes || 0}</span>
+                        </button>
+                    </div>
                 </div>
             `;
         }).join('');
+
+        // Attach heart reaction event listeners
+        document.querySelectorAll('.like-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = Number(btn.getAttribute('data-id'));
+                const storedWishes = loadWishes();
+                const updated = storedWishes.map(w => {
+                    if (w.timestamp === id) {
+                        return { ...w, likes: (w.likes || 0) + 1 };
+                    }
+                    return w;
+                });
+                saveWishes(updated);
+                renderWishes();
+                triggerToast("Ucapan disukai!");
+            });
+        });
     }
 
     // Initialize wishes wall
@@ -152,22 +196,37 @@
 
         const nameElem = document.getElementById('rsvp-name') as HTMLInputElement;
         const statusElem = document.getElementById('rsvp-status') as HTMLSelectElement;
+        const guestsElem = document.getElementById('rsvp-guests') as HTMLSelectElement;
         const messageElem = document.getElementById('rsvp-message') as HTMLTextAreaElement;
 
-        if (!nameElem || !statusElem || !messageElem) return;
+        if (!nameElem || !statusElem || !guestsElem || !messageElem) return;
 
         const newWish: Wish = {
             name: nameElem.value,
             status: statusElem.value,
-            message: messageElem.value
+            guests: guestsElem.value,
+            message: messageElem.value,
+            timestamp: Date.now(),
+            likes: 0
         };
 
+        // Save locally first
         const wishes = loadWishes();
-        wishes.unshift(newWish); // prepend to show on top
+        wishes.unshift(newWish);
         saveWishes(wishes);
         renderWishes();
 
+        // Redirect to WhatsApp
+        const weddingPhoneNumber = "62895395272714"; // Wira's WhatsApp
+        const waMessage = `Halo Wira & Ayu, saya *${newWish.name}* ingin mengonfirmasi kehadiran di acara pernikahan Anda.\n\n*Konfirmasi Kehadiran:* ${newWish.status}\n*Jumlah Tamu:* ${newWish.guests}\n\n*Ucapan & Doa:* \n"${newWish.message}"`;
+        const waUrl = `https://api.whatsapp.com/send?phone=${weddingPhoneNumber}&text=${encodeURIComponent(waMessage)}`;
+
         form.reset();
-        triggerToast("Ucapan & RSVP Berhasil Dikirim!");
+        triggerToast("Ucapan Terkirim! Mengarahkan ke WhatsApp...");
+
+        // Open WhatsApp in a new tab
+        setTimeout(() => {
+            window.open(waUrl, '_blank');
+        }, 1200);
     });
 </script>

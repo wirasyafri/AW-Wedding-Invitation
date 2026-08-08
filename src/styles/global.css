@@ -15,10 +15,16 @@
   --font-sans: "Plus Jakarta Sans", sans-serif;
 
   --animate-float: float 4s ease-in-out infinite;
+  --animate-kenburns: kenburns 20s ease-in-out infinite alternate;
 
   @keyframes float {
     0%, 100% { transform: translateY(0px); }
     50% { transform: translateY(-10px); }
+  }
+
+  @keyframes kenburns {
+    0% { transform: scale(1.05); }
+    100% { transform: scale(1.15); }
   }
 }
 
@@ -34,6 +40,18 @@
 
 @utility royal-bg {
   background: radial-gradient(circle at center, #112244 0%, #081123 100%);
+}
+
+/* Scroll reveal helper utilities */
+@utility reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1), transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@utility reveal-active {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
 }
 
 /* Custom scrollbar */
