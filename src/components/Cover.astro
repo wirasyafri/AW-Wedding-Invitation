@@ -5,6 +5,9 @@ const { settings } = Astro.props;
 <div id="invitation-cover" class="fixed inset-0 z-50 flex items-center justify-center royal-bg px-4 transition-opacity duration-1000">
     <div class="absolute inset-0 opacity-20 bg-[radial-gradient(var(--color-gold)_1px,transparent_1px)] [background-size:24px_24px]"></div>
     
+    <!-- Animated background for hamsters & sugar gliders -->
+    <canvas id="cover-pets-canvas" class="absolute inset-0 w-full h-full pointer-events-none z-0"></canvas>
+    
     <div class="relative z-10 max-w-lg w-full bg-stone-900/90 border-2 border-gold/40 rounded-2xl p-8 md:p-12 text-center shadow-2xl backdrop-blur-md">
         <!-- Decorative Crown / Palace Icon -->
         <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gold/10 border border-gold/30 mb-6 text-gold text-3xl animate-float">
@@ -65,7 +68,433 @@ const { settings } = Astro.props;
                 if (musicToggle) {
                     musicToggle.classList.remove('hidden');
                 }
+                // Stop cover pets animation loop
+                coverActive = false;
             }, 1000);
         }
     });
+
+    // --- Hamster & Sugar Glider Canvas Animation ---
+    let coverActive = true;
+    const petsCanvas = document.getElementById('cover-pets-canvas') as HTMLCanvasElement | null;
+    if (petsCanvas) {
+        const ctx = petsCanvas.getContext('2d');
+        if (ctx) {
+            let width = (petsCanvas.width = window.innerWidth);
+            let height = (petsCanvas.height = window.innerHeight);
+
+            window.addEventListener('resize', () => {
+                width = petsCanvas.width = window.innerWidth;
+                height = petsCanvas.height = window.innerHeight;
+            });
+
+            // Hamster drawing helper
+            function drawHamster(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, direction: number, step: number) {
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.scale(direction, 1); // Flip based on direction
+                
+                // Body (winter white grey)
+                ctx.beginPath();
+                ctx.ellipse(0, 0, size * 1.2, size * 0.9, 0, 0, Math.PI * 2);
+                ctx.fillStyle = '#E5E5E5'; 
+                ctx.fill();
+                
+                // Belly (white)
+                ctx.beginPath();
+                ctx.ellipse(-size * 0.2, size * 0.2, size * 0.8, size * 0.6, 0, 0, Math.PI * 2);
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fill();
+                
+                // Head
+                ctx.beginPath();
+                ctx.ellipse(size * 0.8, -size * 0.2, size * 0.8, size * 0.8, 0, 0, Math.PI * 2);
+                ctx.fillStyle = '#E5E5E5';
+                ctx.fill();
+                
+                // Ear
+                ctx.beginPath();
+                ctx.arc(size * 0.5, -size * 0.9, size * 0.35, 0, Math.PI * 2);
+                ctx.fillStyle = '#D4AF37'; // Golden highlights
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(size * 0.5, -size * 0.9, size * 0.2, 0, Math.PI * 2);
+                ctx.fillStyle = '#FFC0CB'; // Pink inner ear
+                ctx.fill();
+                
+                // Eye
+                ctx.beginPath();
+                ctx.arc(size * 1.1, -size * 0.3, size * 0.15, 0, Math.PI * 2);
+                ctx.fillStyle = '#000000';
+                ctx.fill();
+                
+                // Eye shine
+                ctx.beginPath();
+                ctx.arc(size * 1.15, -size * 0.35, size * 0.05, 0, Math.PI * 2);
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fill();
+                
+                // Feet (wiggling based on step)
+                const footWiggle = Math.sin(step) * 4;
+                ctx.fillStyle = '#FFC0CB'; 
+                ctx.beginPath();
+                ctx.ellipse(-size * 0.6, size * 0.8 + footWiggle, size * 0.2, size * 0.15, 0, 0, Math.PI * 2);
+                ctx.ellipse(size * 0.6, size * 0.8 - footWiggle, size * 0.2, size * 0.15, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Tail
+                ctx.beginPath();
+                ctx.arc(-size * 1.2, size * 0.2, size * 0.15, 0, Math.PI * 2);
+                ctx.fillStyle = '#FFC0CB';
+                ctx.fill();
+                
+                ctx.restore();
+            }
+
+            // Sugar glider drawing helper
+            function drawSugarGlider(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, rotation: number, state: number) {
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(rotation);
+                
+                // 1. Membrane (Large stretched skin, light/medium grey)
+                ctx.beginPath();
+                ctx.moveTo(-size * 1.5, -size * 0.8); // Left wrist
+                ctx.quadraticCurveTo(-size * 0.3, -size * 0.6, 0, -size * 0.8); // Neck/shoulders curve
+                ctx.quadraticCurveTo(size * 0.3, -size * 0.6, size * 1.5, -size * 0.8); // Right wrist
+                ctx.quadraticCurveTo(size * 0.6, 0, size * 1.3, size * 0.8); // Right ankle
+                ctx.quadraticCurveTo(0, size * 0.4, -size * 1.3, size * 0.8); // Inner leg curve
+                ctx.quadraticCurveTo(-size * 0.6, 0, -size * 1.5, -size * 0.8); // Left ankle to wrist curve
+                ctx.closePath();
+                ctx.fillStyle = '#A6ACAF'; // Cute grey glider color
+                ctx.fill();
+                
+                // Dark edge lining on the membrane
+                ctx.lineWidth = size * 0.12;
+                ctx.strokeStyle = '#5D6D7E';
+                ctx.stroke();
+                
+                // White fur lining on inner edge of membrane
+                ctx.beginPath();
+                ctx.moveTo(-size * 1.4, -size * 0.7);
+                ctx.quadraticCurveTo(0, -size * 0.2, size * 1.4, -size * 0.7);
+                ctx.lineWidth = size * 0.08;
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.stroke();
+
+                // 2. Pink Paws (Four corners)
+                ctx.fillStyle = '#FFA07A'; // Peach/pink paws
+                // Front left paw (wrist)
+                ctx.beginPath();
+                ctx.arc(-size * 1.5, -size * 0.8, size * 0.15, 0, Math.PI * 2);
+                ctx.fill();
+                // Front right paw (wrist)
+                ctx.beginPath();
+                ctx.arc(size * 1.5, -size * 0.8, size * 0.15, 0, Math.PI * 2);
+                ctx.fill();
+                // Back left paw (ankle)
+                ctx.beginPath();
+                ctx.arc(-size * 1.3, size * 0.8, size * 0.15, 0, Math.PI * 2);
+                ctx.fill();
+                // Back right paw (ankle)
+                ctx.beginPath();
+                ctx.arc(size * 1.3, size * 0.8, size * 0.15, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw tiny wiggling toes (drawn as small lines)
+                ctx.strokeStyle = '#FFA07A';
+                ctx.lineWidth = size * 0.05;
+                for (let angle = 0.5; angle < 2.5; angle += 0.5) {
+                    // Left front
+                    ctx.beginPath();
+                    ctx.moveTo(-size * 1.5, -size * 0.8);
+                    ctx.lineTo(-size * 1.5 + Math.cos(angle + Math.PI) * size * 0.25, -size * 0.8 + Math.sin(angle + Math.PI) * size * 0.25);
+                    ctx.stroke();
+                    // Right front
+                    ctx.beginPath();
+                    ctx.moveTo(size * 1.5, -size * 0.8);
+                    ctx.lineTo(size * 1.5 + Math.cos(angle) * size * 0.25, -size * 0.8 + Math.sin(angle) * size * 0.25);
+                    ctx.stroke();
+                }
+
+                // 3. Tail (long, waving, grey with dark tip)
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(0, size * 0.8);
+                // Waving motion based on math sin
+                const tailX1 = Math.sin(state) * size * 0.6;
+                const tailX2 = Math.sin(state + 1) * size * 1.0;
+                ctx.bezierCurveTo(tailX1, size * 1.8, tailX2, size * 2.8, tailX2, size * 3.5);
+                ctx.lineWidth = size * 0.25;
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = '#A6ACAF'; // Grey tail base
+                ctx.stroke();
+                
+                // Dark tail tip
+                ctx.strokeStyle = '#2E4053'; // Dark tip
+                ctx.lineWidth = size * 0.25;
+                ctx.beginPath();
+                ctx.moveTo(tailX2, size * 3.0);
+                ctx.lineTo(tailX2, size * 3.5);
+                ctx.stroke();
+                ctx.restore();
+
+                // 4. Main body trunk (white chest, grey back)
+                ctx.beginPath();
+                ctx.ellipse(0, 0, size * 0.45, size * 0.9, 0, 0, Math.PI * 2);
+                ctx.fillStyle = '#FFFFFF'; // White belly
+                ctx.fill();
+                
+                // Outer grey jacket back
+                ctx.beginPath();
+                ctx.ellipse(0, 0, size * 0.4, size * 0.85, 0, 0, Math.PI * 2);
+                ctx.fillStyle = '#D5D8DC'; // Light grey back
+                ctx.fill();
+
+                // 5. Head
+                ctx.beginPath();
+                ctx.ellipse(0, -size * 1.1, size * 0.55, size * 0.45, 0, 0, Math.PI * 2);
+                ctx.fillStyle = '#D5D8DC';
+                ctx.fill();
+
+                // Pink nose
+                ctx.beginPath();
+                ctx.moveTo(0, -size * 1.45);
+                ctx.lineTo(-size * 0.08, -size * 1.55);
+                ctx.lineTo(size * 0.08, -size * 1.55);
+                ctx.closePath();
+                ctx.fillStyle = '#FFA07A'; // Pink nose
+                ctx.fill();
+
+                // Ears (with pink insides)
+                // Left Ear
+                ctx.save();
+                ctx.translate(-size * 0.4, -size * 1.4);
+                ctx.rotate(-Math.PI / 4);
+                ctx.beginPath();
+                ctx.ellipse(0, 0, size * 0.25, size * 0.18, 0, 0, Math.PI * 2);
+                ctx.fillStyle = '#2E4053'; // Dark outer ear
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(0, 0, size * 0.18, size * 0.12, 0, 0, Math.PI * 2);
+                ctx.fillStyle = '#FFA07A'; // Pink inner ear
+                ctx.fill();
+                ctx.restore();
+                
+                // Right Ear
+                ctx.save();
+                ctx.translate(size * 0.4, -size * 1.4);
+                ctx.rotate(Math.PI / 4);
+                ctx.beginPath();
+                ctx.ellipse(0, 0, size * 0.25, size * 0.18, 0, 0, Math.PI * 2);
+                ctx.fillStyle = '#2E4053'; // Dark outer ear
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(0, 0, size * 0.18, size * 0.12, 0, 0, Math.PI * 2);
+                ctx.fillStyle = '#FFA07A'; // Pink inner ear
+                ctx.fill();
+                ctx.restore();
+
+                // 6. Characteristic dark stripes (sugar glider signature)
+                ctx.strokeStyle = '#2E4053'; // Dark charcoal stripe
+                ctx.lineWidth = size * 0.08;
+                
+                // Center stripe down the forehead to back
+                ctx.beginPath();
+                ctx.moveTo(0, -size * 1.45);
+                ctx.lineTo(0, size * 0.6);
+                ctx.stroke();
+
+                // Side face stripes (eye patches)
+                ctx.beginPath();
+                ctx.moveTo(-size * 0.45, -size * 1.4);
+                ctx.quadraticCurveTo(-size * 0.2, -size * 1.25, -size * 0.05, -size * 1.4);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(size * 0.45, -size * 1.4);
+                ctx.quadraticCurveTo(size * 0.2, -size * 1.25, size * 0.05, -size * 1.4);
+                ctx.stroke();
+
+                // 7. Large dark eyes with reflections (Big sugar glider eyes!)
+                ctx.fillStyle = '#1A252C';
+                // Left eye
+                ctx.beginPath();
+                ctx.arc(-size * 0.26, -size * 1.22, size * 0.14, 0, Math.PI * 2);
+                ctx.fill();
+                // Right eye
+                ctx.beginPath();
+                ctx.arc(size * 0.26, -size * 1.22, size * 0.14, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Highlights
+                ctx.fillStyle = '#FFFFFF';
+                // Left eye highlights
+                ctx.beginPath();
+                ctx.arc(-size * 0.22, -size * 1.26, size * 0.04, 0, Math.PI * 2);
+                ctx.arc(-size * 0.3, -size * 1.18, size * 0.02, 0, Math.PI * 2);
+                ctx.fill();
+                // Right eye highlights
+                ctx.beginPath();
+                ctx.arc(size * 0.3, -size * 1.26, size * 0.04, 0, Math.PI * 2);
+                ctx.arc(size * 0.22, -size * 1.18, size * 0.02, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+
+            // Animatable elements
+            class Hamster {
+                x: number;
+                y: number;
+                size: number;
+                direction: number;
+                speed: number;
+                state: number;
+                actionTimer: number;
+
+                constructor(x: number) {
+                    this.x = x;
+                    this.y = height - 30;
+                    this.size = 12 + Math.random() * 4;
+                    this.direction = Math.random() > 0.5 ? 1 : -1;
+                    this.speed = 0.5 + Math.random() * 0.5;
+                    this.state = Math.random() * 100;
+                    this.actionTimer = Math.random() * 120 + 60;
+                }
+
+                update() {
+                    this.actionTimer--;
+                    if (this.actionTimer <= 0) {
+                        const rng = Math.random();
+                        if (rng < 0.3) {
+                            this.speed = 0; // sniff
+                        } else if (rng < 0.6) {
+                            this.speed = 0.6 + Math.random() * 0.8; // run
+                            this.direction *= -1; // change dir
+                        } else {
+                            this.speed = 0.4 + Math.random() * 0.4; // walk
+                        }
+                        this.actionTimer = Math.random() * 120 + 60;
+                    }
+
+                    if (this.speed > 0) {
+                        this.x += this.speed * this.direction;
+                        this.state += 0.15;
+                    } else {
+                        this.state += 0.05;
+                    }
+
+                    // Boundaries
+                    if (this.x < 30) {
+                        this.x = 30;
+                        this.direction = 1;
+                    } else if (this.x > width - 30) {
+                        this.x = width - 30;
+                        this.direction = -1;
+                    }
+
+                    this.y = height - 30;
+                }
+
+                draw() {
+                    if (!ctx) return;
+                    drawHamster(ctx, this.x, this.y, this.size, this.direction, this.state);
+                }
+            }
+
+            class SugarGlider {
+                x!: number;
+                y!: number;
+                size!: number;
+                targetX!: number;
+                targetY!: number;
+                speed!: number;
+                gliding!: boolean;
+                cooldown!: number;
+                state!: number;
+                startX!: number;
+                startY!: number;
+
+                constructor() {
+                    this.reset();
+                    this.cooldown = Math.random() * 180; // stagger start times
+                }
+
+                reset() {
+                    this.gliding = false;
+                    this.cooldown = Math.random() * 300 + 150; 
+                    this.size = 14 + Math.random() * 4;
+                    this.state = Math.random() * 100;
+                    
+                    if (Math.random() > 0.5) {
+                        this.x = -50;
+                        this.y = Math.random() * (height * 0.3);
+                        this.targetX = width + 100;
+                        this.targetY = height * 0.6 + Math.random() * (height * 0.4);
+                    } else {
+                        this.x = width + 50;
+                        this.y = Math.random() * (height * 0.3);
+                        this.targetX = -100;
+                        this.targetY = height * 0.6 + Math.random() * (height * 0.4);
+                    }
+
+                    this.startX = this.x;
+                    this.startY = this.y;
+                    this.speed = 2.5 + Math.random() * 1.5;
+                }
+
+                update() {
+                    if (this.gliding) {
+                        const dx = this.targetX - this.startX;
+                        const dy = this.targetY - this.startY;
+                        const angle = Math.atan2(dy, dx);
+
+                        this.x += Math.cos(angle) * this.speed;
+                        this.y += Math.sin(angle) * this.speed;
+                        this.state += 0.2;
+
+                        if ((dx > 0 && this.x > this.targetX) || (dx < 0 && this.x < this.targetX)) {
+                            this.reset();
+                        }
+                    } else {
+                        this.cooldown--;
+                        if (this.cooldown <= 0) {
+                            this.gliding = true;
+                        }
+                    }
+                }
+
+                draw() {
+                    if (!ctx || !this.gliding) return;
+                    const dx = this.targetX - this.startX;
+                    const dy = this.targetY - this.startY;
+                    const angle = Math.atan2(dy, dx) + Math.PI / 2;
+                    drawSugarGlider(ctx, this.x, this.y, this.size, angle, this.state);
+                }
+            }
+
+            const hamsters = [new Hamster(width * 0.25), new Hamster(width * 0.75)];
+            const gliders = [new SugarGlider(), new SugarGlider()];
+
+            function animate() {
+                if (!coverActive || !ctx) return;
+                ctx.clearRect(0, 0, width, height);
+
+                for (const h of hamsters) {
+                    h.update();
+                    h.draw();
+                }
+
+                for (const g of gliders) {
+                    g.update();
+                    g.draw();
+                }
+
+                requestAnimationFrame(animate);
+            }
+
+            animate();
+        }
+    }
 </script>
