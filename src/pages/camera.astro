@@ -5,6 +5,8 @@ import { supabase } from '../lib/supabase.server';
 
 // Fetch active camera settings
 const defaultSettings = {
+  groom_name_short: 'Wira',
+  bride_name_short: 'Ayu',
   camera_allow_change_guest: true,
   camera_allow_delete_photo: true,
   camera_photo_limit: 15,
@@ -15,7 +17,7 @@ let activeSettings = defaultSettings;
 try {
   const { data: dbSettings } = await supabase
     .from('settings')
-    .select('camera_allow_change_guest, camera_allow_delete_photo, camera_photo_limit, camera_delete_limit')
+    .select('groom_name_short, bride_name_short, camera_allow_change_guest, camera_allow_delete_photo, camera_photo_limit, camera_delete_limit')
     .eq('id', 1)
     .single();
   if (dbSettings) {
@@ -26,12 +28,12 @@ try {
 }
 ---
 
-<Layout title="Disposable Camera - Wira & Ayu" description="Capture your best moments at the wedding of Wira & Ayu.">
+<Layout title={`Disposable Camera - ${activeSettings.groom_name_short} & ${activeSettings.bride_name_short}`} description={`Capture your best moments at the wedding of ${activeSettings.groom_name_short} & ${activeSettings.bride_name_short}.`}>
   <div class="min-h-screen bg-stone-950 text-stone-100 flex flex-col justify-between py-8 px-4 font-sans select-none">
     
     <header class="text-center max-w-md mx-auto w-full mb-4">
       <h1 class="font-cinzel text-2xl text-gold uppercase tracking-widest font-bold">Wedding Camera</h1>
-      <p class="font-script text-xl text-gold-light mt-1">Wira & Ayu</p>
+      <p class="font-script text-xl text-gold-light mt-1">{activeSettings.groom_name_short} & {activeSettings.bride_name_short}</p>
     </header>
 
     <main class="flex-grow flex flex-col items-center justify-center max-w-md mx-auto w-full">

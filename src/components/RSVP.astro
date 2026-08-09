@@ -1,6 +1,7 @@
 ---
+const { settings } = Astro.props;
 ---
-<section class="py-24 px-4 bg-stone-900 text-stone-100">
+<section id="rsvp-section" class="py-24 px-4 bg-stone-900 text-stone-100" data-groom-short={settings?.groom_name_short || 'Wira'} data-bride-short={settings?.bride_name_short || 'Ayu'}>
     <div class="max-w-3xl mx-auto reveal">
         <div class="text-center mb-12">
             <span class="font-cinzel uppercase tracking-[0.3em] text-xs text-gold block mb-2">Kehadiran & Doa</span>
@@ -245,7 +246,10 @@
                 const whatsappEnabled = localStorage.getItem('whatsappEnabled') !== 'false';
                 const weddingPhoneNumber = localStorage.getItem('whatsappNumber') || "6287850112205"; // default fallback
                 if (whatsappEnabled) {
-                    const waMessage = `Halo Wira & Ayu, saya *${wishData.name}* ingin mengonfirmasi kehadiran di acara pernikahan Anda.\n\n*Konfirmasi Kehadiran:* ${wishData.status}\n*Jumlah Tamu:* ${wishData.guests}\n\n*Ucapan & Doa:* \n"${wishData.message}"`;
+                    const rsvpSection = document.getElementById('rsvp-section');
+                    const groomShort = rsvpSection ? rsvpSection.getAttribute('data-groom-short') : 'Wira';
+                    const brideShort = rsvpSection ? rsvpSection.getAttribute('data-bride-short') : 'Ayu';
+                    const waMessage = `Halo ${groomShort} & ${brideShort}, saya *${wishData.name}* ingin mengonfirmasi kehadiran di acara pernikahan Anda.\n\n*Konfirmasi Kehadiran:* ${wishData.status}\n*Jumlah Tamu:* ${wishData.guests}\n\n*Ucapan & Doa:* \n"${wishData.message}"`;
                     const waUrl = `https://api.whatsapp.com/send?phone=${weddingPhoneNumber}&text=${encodeURIComponent(waMessage)}`;
                     const waBtn = document.getElementById('rsvp-wa-btn');
                     if (waBtn) {

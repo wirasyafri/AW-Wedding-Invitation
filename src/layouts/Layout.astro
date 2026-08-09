@@ -1,15 +1,45 @@
 ---
 import '../styles/global.css';
 
+import { supabase } from '../lib/supabase';
+
 interface Props {
 	title?: string;
 	description?: string;
 }
 
-const { 
-	title = "The Wedding of Wira & Ayu", 
-	description = "Undangan Pernikahan Suci Syafri Wira Wicaksana & Barqhadini Ayuningsih - Selasa, 5 Januari 2027" 
-} = Astro.props;
+const { title, description } = Astro.props;
+
+let activeTitle = title;
+let activeDescription = description;
+
+if (!activeTitle || !activeDescription) {
+  let settings: any = null;
+  try {
+    const { data } = await supabase
+      .from('settings')
+      .select('groom_name_short, bride_name_short, groom_name_full, bride_name_full')
+      .eq('id', 1)
+      .single();
+    if (data) {
+      settings = data;
+    }
+  } catch (e) {
+    console.error("Layout failed to fetch fallback names:", e);
+  }
+
+  const groomShort = settings?.groom_name_short || 'Wira';
+  const brideShort = settings?.bride_name_short || 'Ayu';
+  const groomFull = settings?.groom_name_full || 'Syafri Wira Wicaksana S.Tr.Kom, M.Kom';
+  const brideFull = settings?.bride_name_full || 'Barqhadini Ayuningsih, S.T., M.T';
+
+  if (!activeTitle) {
+    activeTitle = `The Wedding of ${groomShort} & ${brideShort}`;
+  }
+  if (!activeDescription) {
+    activeDescription = `Undangan Pernikahan Suci ${groomFull} & ${brideFull} - Selasa, 5 Januari 2027`;
+  }
+}
 ---
 
 <!doctype html>
@@ -21,10 +51,10 @@ const {
 		<meta name="generator" content={Astro.generator} />
 		
 		<!-- SEO Meta Tags -->
-		<title>{title}</title>
-		<meta name="description" content={description} />
-		<meta property="og:title" content={title} />
-		<meta property="og:description" content={description} />
+		<title>{activeTitle}</title>
+		<meta name="description" content={activeDescription} />
+		<meta property="og:title" content={activeTitle} />
+		<meta property="og:description" content={activeDescription} />
 		<meta property="og:type" content="website" />
 		
 		<!-- Google Fonts -->
