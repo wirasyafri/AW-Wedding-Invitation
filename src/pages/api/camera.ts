@@ -40,7 +40,7 @@ export const GET: APIRoute = async ({ request }) => {
 
   const { data, error } = await supabase
     .from('camera_photos')
-    .select('url, created_at')
+    .select('id, url, created_at')
     .eq('guest_id', guest)
     .order('created_at', { ascending: false });
 
@@ -50,7 +50,22 @@ export const GET: APIRoute = async ({ request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   }
-  return new Response(JSON.stringify(data ?? []), {
+
+  // Count deletions for this guest
+  let deletionCount = 0;
+  try {
+    const { count, error: countError } = await supabase
+      .from('camera_deletions')
+      .select('id', { count: 'exact', head: true })
+      .eq('guest_id', guest);
+    if (!countError && count !== null) {
+      deletionCount = count;
+    }
+  } catch (err) {
+    console.error('Failed to fetch deletion count:', err);
+  }
+
+  return new Response(JSON.stringify({ photos: data ?? [], deletionCount }), {
     status: 200,
     headers: { 'Content-Type': 'application/json' },
   });
@@ -143,10 +158,13 @@ export const DELETE: APIRoute = async ({ request }) => {
   const url = new URL(request.url);
   const id = url.searchParams.get('id');
   const adminPass = url.searchParams.get('adminPass');
+  const guest = url.searchParams.get('guest');
 
   const adminPassword = import.meta.env.ADMIN_PASSWORD;
-  if (!adminPass || adminPass !== adminPassword) {
-    return new Response(JSON.stringify({ error: 'Unauthorized: Password salah!' }), {
+  const isAdmin = adminPass && adminPass === adminPassword;
+
+  if (!isAdmin && !guest) {
+    return new Response(JSON.stringify({ error: 'Unauthorized: Kredensial tidak valid' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -159,21 +177,80 @@ export const DELETE: APIRoute = async ({ request }) => {
     });
   }
 
-  // 1. Get the URL of the photo to extract file path
+  // 1. Get the record of the photo to extract file path and guest owner
   const { data: photoRecord, error: fetchError } = await supabase
     .from('camera_photos')
-    .select('url')
+    .select('guest_id, url')
     .eq('id', id)
     .single();
 
   if (fetchError || !photoRecord) {
-    return new Response(JSON.stringify({ error: 'Photo record not found' }), {
+    return new Response(JSON.stringify({ error: 'Foto tidak ditemukan' }), {
       status: 404,
       headers: { 'Content-Type': 'application/json' },
     });
   }
 
-  // 2. Extract and remove from Supabase Storage
+  // 2. If it is a guest deletion, perform authorization and limit checks
+  if (!isAdmin) {
+    // Check if the photo actually belongs to this guest
+    if (photoRecord.guest_id !== guest) {
+      return new Response(JSON.stringify({ error: 'Forbidden: Anda tidak memiliki akses untuk menghapus foto ini' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Load delete configurations from settings
+    let deleteLimit = 5;
+    let allowDelete = true;
+    try {
+      const { data: dbSettings } = await supabase
+        .from('settings')
+        .select('camera_delete_limit, camera_allow_delete_photo')
+        .eq('id', 1)
+        .single();
+      if (dbSettings) {
+        if (dbSettings.camera_delete_limit !== undefined) {
+          deleteLimit = dbSettings.camera_delete_limit;
+        }
+        if (dbSettings.camera_allow_delete_photo !== undefined) {
+          allowDelete = dbSettings.camera_allow_delete_photo;
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load settings delete configurations, using default:', err);
+    }
+
+    if (!allowDelete) {
+      return new Response(JSON.stringify({ error: 'Forbidden: Fitur hapus foto dinonaktifkan oleh administrator' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Count how many deletions the guest has already completed
+    const { count: deletionCount, error: countError } = await supabase
+      .from('camera_deletions')
+      .select('id', { count: 'exact', head: true })
+      .eq('guest_id', guest);
+
+    if (countError) {
+      return new Response(JSON.stringify({ error: 'Gagal memverifikasi jumlah penghapusan' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (deletionCount !== null && deletionCount >= deleteLimit) {
+      return new Response(JSON.stringify({ error: `Anda telah mencapai batas maksimal menghapus ${deleteLimit} foto!` }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+  }
+
+  // 3. Extract and remove from Supabase Storage
   const urlParts = photoRecord.url.split('/disposable-camera/');
   if (urlParts.length >= 2) {
     const filePath = decodeURIComponent(urlParts[1]);
@@ -185,7 +262,7 @@ export const DELETE: APIRoute = async ({ request }) => {
     }
   }
 
-  // 3. Delete from database
+  // 4. Delete from database
   const { error: deleteError } = await supabase
     .from('camera_photos')
     .delete()
@@ -196,6 +273,20 @@ export const DELETE: APIRoute = async ({ request }) => {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
+  }
+
+  // 5. Log the deletion in camera_deletions if it's a guest deletion
+  if (!isAdmin) {
+    const { error: logError } = await supabase
+      .from('camera_deletions')
+      .insert({
+        guest_id: guest,
+        photo_url: photoRecord.url,
+        deleted_at: new Date().toISOString()
+      });
+    if (logError) {
+      console.error('Failed to log guest deletion:', logError.message);
+    }
   }
 
   return new Response(JSON.stringify({ success: true }), {

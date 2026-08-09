@@ -28,10 +28,18 @@ export const POST: APIRoute = async ({ request }) => {
         settingsData.camera_allow_change_guest !== undefined
           ? (settingsData.camera_allow_change_guest === 'true' || settingsData.camera_allow_change_guest === '1')
           : false,
+      camera_allow_delete_photo:
+        settingsData.camera_allow_delete_photo !== undefined
+          ? (settingsData.camera_allow_delete_photo === 'true' || settingsData.camera_allow_delete_photo === '1')
+          : false,
       camera_photo_limit:
         settingsData.camera_photo_limit !== undefined
           ? parseInt(settingsData.camera_photo_limit) || 15
           : 15,
+      camera_delete_limit:
+        settingsData.camera_delete_limit !== undefined
+          ? parseInt(settingsData.camera_delete_limit) || 5
+          : 5,
     };
     const { data, error } = await supabase
       .from('settings')

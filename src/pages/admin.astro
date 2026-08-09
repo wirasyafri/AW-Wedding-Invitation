@@ -49,7 +49,9 @@ const defaultSettings = {
     whatsapp_enabled: true,
     whatsapp_number: '',
     camera_allow_change_guest: true,
-    camera_photo_limit: 15
+    camera_allow_delete_photo: true,
+    camera_photo_limit: 15,
+    camera_delete_limit: 5
 };
 
 let activeSettings = defaultSettings;
@@ -600,18 +602,29 @@ function parseUtcIsoToLocal(utcIso: string) {
                             {/* Disposable Camera Settings */}
                             <div class="pt-6 border-t border-stone-800/40">
                                 <h3 class="font-cinzel text-[10px] text-gold uppercase tracking-wider mb-4 font-bold">Pengaturan Kamera Disposable</h3>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <div>
                                         <div class="flex items-center space-x-2 mb-2">
                                             <input type="checkbox" id="camera_allow_change_guest" name="camera_allow_change_guest" class="accent-gold" value="true" checked={activeSettings.camera_allow_change_guest} />
                                             <label for="camera_allow_change_guest" class="text-stone-200 text-xs">Izinkan Berganti Akun ("Ganti Tamu")</label>
                                         </div>
-                                        <p class="text-stone-500 text-[10px]">Jika dimatikan, tombol "Ganti Tamu" di halaman kamera akan disembunyikan untuk mencegah tamu berganti akun.</p>
+                                        <p class="text-stone-500 text-[10px] mb-4">Jika dimatikan, tombol "Ganti Tamu" di halaman kamera akan disembunyikan untuk mencegah tamu berganti akun.</p>
+
+                                        <div class="flex items-center space-x-2 mb-2">
+                                            <input type="checkbox" id="camera_allow_delete_photo" name="camera_allow_delete_photo" class="accent-gold" value="true" checked={activeSettings.camera_allow_delete_photo} />
+                                            <label for="camera_allow_delete_photo" class="text-stone-200 text-xs">Izinkan Tamu Menghapus Foto</label>
+                                        </div>
+                                        <p class="text-stone-500 text-[10px]">Jika diaktifkan, tamu dapat menghapus foto mereka sendiri (maksimal sesuai batas hapus di samping).</p>
                                     </div>
                                     <div>
                                         <label class="block text-stone-500 text-[10px] uppercase tracking-wider mb-1">Batas Maksimal Foto per Tamu</label>
                                         <input type="number" name="camera_photo_limit" min="1" max="100" value={activeSettings.camera_photo_limit} class="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 text-xs focus:outline-none focus:border-gold" />
                                         <p class="text-stone-500 text-[10px] mt-1">Batas jumlah jepretan foto kamera disposable per tamu (Default: 15).</p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-stone-500 text-[10px] uppercase tracking-wider mb-1">Batas Maksimal Hapus Foto per Tamu</label>
+                                        <input type="number" name="camera_delete_limit" min="0" max="50" value={activeSettings.camera_delete_limit !== undefined ? activeSettings.camera_delete_limit : 5} class="w-full bg-stone-950 border border-stone-800 rounded px-3 py-2 text-stone-200 text-xs focus:outline-none focus:border-gold" />
+                                        <p class="text-stone-500 text-[10px] mt-1">Batas jumlah foto yang boleh dihapus oleh tamu (Default: 5).</p>
                                     </div>
                                 </div>
                             </div>

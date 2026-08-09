@@ -6,14 +6,16 @@ import { supabase } from '../lib/supabase.server';
 // Fetch active camera settings
 const defaultSettings = {
   camera_allow_change_guest: true,
-  camera_photo_limit: 15
+  camera_allow_delete_photo: true,
+  camera_photo_limit: 15,
+  camera_delete_limit: 5
 };
 
 let activeSettings = defaultSettings;
 try {
   const { data: dbSettings } = await supabase
     .from('settings')
-    .select('camera_allow_change_guest, camera_photo_limit')
+    .select('camera_allow_change_guest, camera_allow_delete_photo, camera_photo_limit, camera_delete_limit')
     .eq('id', 1)
     .single();
   if (dbSettings) {
@@ -59,14 +61,22 @@ try {
       </section>
 
       <!-- Section 2: Camera View Finder & Capture Controls -->
-      <section id="camera-section" class="w-full space-y-6" style="display: none;" data-limit={activeSettings.camera_photo_limit} data-allow-change={activeSettings.camera_allow_change_guest ? "true" : "false"}>
+      <section id="camera-section" class="w-full space-y-6" style="display: none;" data-limit={activeSettings.camera_photo_limit} data-delete-limit={activeSettings.camera_delete_limit} data-allow-delete={activeSettings.camera_allow_delete_photo ? "true" : "false"} data-allow-change={activeSettings.camera_allow_change_guest ? "true" : "false"}>
         
         <!-- Retro Camera Body Mockup -->
         <div class="w-full bg-stone-900 border border-stone-850 rounded-[2.5rem] shadow-2xl overflow-hidden relative border-t-8 border-t-stone-400">
           
           <!-- Camera Brand / Header -->
           <div class="px-6 py-3 flex justify-between items-center bg-stone-950/40 border-b border-stone-800/60">
-            <span class="font-cinzel text-[10px] text-stone-500 tracking-widest font-bold">WEDDING CAM 400</span>
+            <div class="flex flex-col">
+              <span class="font-cinzel text-[10px] text-stone-500 tracking-widest font-bold">WEDDING CAM 400</span>
+              <span class="text-[8px] text-stone-400 tracking-wider">
+                {activeSettings.camera_allow_delete_photo 
+                  ? `Foto buram/salah? Hapus untuk mengulang (${activeSettings.camera_delete_limit} Kali Kesempatan)`
+                  : 'Gunakan kamera untuk mengambil foto terbaik Anda.'
+                }
+              </span>
+            </div>
             <div class="flex items-center gap-2">
               <div id="status-led" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_#10b981]"></div>
               <span class="text-[9px] font-mono text-stone-400 uppercase tracking-wider">Ready</span>
@@ -159,7 +169,10 @@ try {
         <div class="space-y-4">
           <div class="flex justify-between items-center border-b border-stone-800 pb-2">
             <h3 class="font-cinzel text-xs text-gold uppercase tracking-wider font-bold">Galeri Foto Anda</h3>
-            <span id="gallery-count" class="text-[10px] text-stone-500 font-mono">0 / 15 Foto</span>
+            <div class="text-right">
+              <span id="gallery-count" class="block text-[10px] text-stone-500 font-mono">0 / 15 Foto</span>
+              <span id="delete-count" class="block text-[8px] text-stone-400 font-mono">Batas Hapus: 0 / 5</span>
+            </div>
           </div>
 
           <div id="gallery" class="grid grid-cols-2 gap-4">
@@ -225,6 +238,8 @@ try {
 
     // Parse dynamic settings from attributes
     const photoLimit = parseInt(cameraSection.getAttribute('data-limit')) || 15;
+    const deleteLimit = parseInt(cameraSection.getAttribute('data-delete-limit')) || 5;
+    const allowDeletePhoto = cameraSection.getAttribute('data-allow-delete') === 'true';
     const allowChangeGuest = cameraSection.getAttribute('data-allow-change') === 'true';
     if (!allowChangeGuest && logoutBtn) {
       logoutBtn.style.display = 'none';
@@ -389,7 +404,8 @@ try {
       try {
         const res = await fetch(`/api/camera?guest=${encodeURIComponent(guest)}`);
         if (res.ok) {
-          const photos = await res.json();
+          const data = await res.json();
+          const photos = data.photos || [];
           if (photos.length >= photoLimit) {
             alert(`Anda telah mencapai batas maksimal ${photoLimit} foto!`);
             resetReadyLed();
@@ -448,7 +464,7 @@ try {
           resetReadyLed();
           loadingOverlay.style.opacity = '0';
         }
-      }, 'image/jpeg', 0.92);
+      }, 'image/jpeg', 0.85);
     }
 
     function resetReadyLed() {
@@ -461,7 +477,7 @@ try {
       try {
         const res = await fetch(`/api/camera?guest=${encodeURIComponent(guest)}`);
         if (!res.ok) return;
-        const photos = await res.json();
+        const { photos, deletionCount } = await res.json();
         
         // Update stats
         const currentCount = photos.length || 0;
@@ -469,9 +485,22 @@ try {
         photoCounter.innerText = `[ ${sisa.toString().padStart(2, '0')} ]`;
         galleryCountLabel.innerText = `${currentCount} / ${photoLimit} Foto`;
 
+        const deleteCountLabel = document.getElementById('delete-count');
+        if (deleteCountLabel) {
+          if (allowDeletePhoto) {
+            deleteCountLabel.style.display = 'block';
+            deleteCountLabel.innerText = `Batas Hapus: ${deletionCount} / ${deleteLimit}`;
+          } else {
+            deleteCountLabel.style.display = 'none';
+          }
+        }
+
         if (currentCount >= photoLimit) {
           captureBtn.disabled = true;
           ledIndicator.className = 'w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_#f59e0b]';
+        } else {
+          captureBtn.disabled = false;
+          resetReadyLed();
         }
 
         // Render photoPolaroids
@@ -490,6 +519,15 @@ try {
           col.innerHTML = `
             <div class="aspect-square w-full bg-stone-850 overflow-hidden relative mb-2">
               <img src="${p.url}" class="w-full h-full object-cover" alt="Foto Polaroid" />
+              ${allowDeletePhoto ? `
+              <button 
+                class="user-photo-delete-btn absolute top-2 right-2 w-7 h-7 bg-red-950/80 hover:bg-red-650 border border-red-900/40 text-red-400 hover:text-white rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md"
+                data-photo-id="${p.id}"
+                title="Hapus Foto"
+              >
+                <i class="fa-solid fa-trash-can text-[10px]"></i>
+              </button>
+              ` : ''}
             </div>
             <div class="text-[9px] text-stone-800 font-mono tracking-widest text-center truncate uppercase">
               ${timeStr}
@@ -501,5 +539,44 @@ try {
         console.error('Gallery loading error:', err);
       }
     }
+
+    // User photo delete click event delegation listener
+    gallery.addEventListener('click', async (e) => {
+      if (!allowDeletePhoto) return;
+      const btn = e.target.closest('.user-photo-delete-btn');
+      if (!btn) return;
+
+      const photoId = btn.getAttribute('data-photo-id');
+      if (!photoId) return;
+
+      if (!confirm('Apakah Anda yakin ingin menghapus foto ini secara permanen?')) {
+        return;
+      }
+
+      const originalHtml = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-[10px]"></i>';
+
+      try {
+        const res = await fetch(`/api/camera?id=${photoId}&guest=${encodeURIComponent(activeGuest)}`, {
+          method: 'DELETE'
+        });
+
+        if (res.ok) {
+          await loadGallery(activeGuest);
+          alert('Foto berhasil dihapus.');
+        } else {
+          const err = await res.json();
+          alert(err.error || 'Gagal menghapus foto.');
+          btn.disabled = false;
+          btn.innerHTML = originalHtml;
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Kesalahan koneksi saat menghapus foto.');
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+      }
+    });
   </script>
 </Layout>

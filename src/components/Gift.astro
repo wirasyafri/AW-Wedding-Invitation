@@ -42,9 +42,24 @@ const { settings } = Astro.props;
             if (!accNumber) return;
 
             navigator.clipboard.writeText(accNumber).then(() => {
+                // Micro-animation feedback
+                const originalHtml = btn.innerHTML;
+                
+                // Add success visual state
+                btn.classList.add('bg-emerald-500', 'text-stone-950', 'border-emerald-500', 'scale-95');
+                btn.classList.remove('bg-gold/10', 'text-gold-dark', 'border-gold', 'hover:bg-gold', 'hover:text-stone-950');
+                btn.innerHTML = `<i class="fa-solid fa-circle-check mr-2 animate-bounce"></i> Tersalin!`;
+
+                setTimeout(() => {
+                    // Revert visual state
+                    btn.classList.remove('bg-emerald-500', 'text-stone-950', 'border-emerald-500', 'scale-95');
+                    btn.classList.add('bg-gold/10', 'text-gold-dark', 'border-gold', 'hover:bg-gold', 'hover:text-stone-950');
+                    btn.innerHTML = originalHtml;
+                }, 2000);
+
                 const toast = document.getElementById('toast');
                 if (toast) {
-                    toast.innerText = "Nomor Rekening Disalin ke Clipboard!";
+                    toast.innerText = "Nomor Rekening Disalin!";
                     toast.style.opacity = '1';
                     toast.style.transform = 'translate(-50%, -20px)';
                     setTimeout(() => {
