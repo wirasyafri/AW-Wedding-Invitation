@@ -165,6 +165,21 @@ try {
 
         <canvas id="capture-canvas" class="hidden"></canvas>
 
+        <!-- Preview Modal Overlay -->
+        <div id="preview-modal" class="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex flex-col items-center justify-center opacity-0 pointer-events-none transition-all duration-300 px-4">
+          <button id="close-preview-btn" class="absolute top-6 right-6 text-stone-400 hover:text-white text-3xl transition active:scale-90 cursor-pointer p-2">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+          <div class="max-w-lg w-full flex flex-col items-center">
+            <div class="bg-[#FAF8F5] p-4 pb-16 shadow-2xl rounded border border-stone-200/50 w-full">
+              <div class="aspect-square bg-stone-950 overflow-hidden relative mb-4">
+                <img id="modal-preview-img" src="" class="w-full h-full object-contain" alt="Preview Foto" />
+              </div>
+              <p id="modal-preview-time" class="text-xs text-stone-800 font-mono tracking-widest text-center uppercase font-bold"></p>
+            </div>
+          </div>
+        </div>
+
         <!-- Polaroid Gallery Section -->
         <div class="space-y-4">
           <div class="flex justify-between items-center border-b border-stone-800 pb-2">
@@ -235,6 +250,7 @@ try {
     let timerValue = 0; // Timer setting: 0, 3, or 5 seconds
     let activeGuest = '';
     let isMirrored = false; // Active preview mirroring state
+    let currentPhotoCount = 0; // Track photo count dynamically
 
     // Parse dynamic settings from attributes
     const photoLimit = parseInt(cameraSection.getAttribute('data-limit')) || 15;
@@ -360,6 +376,12 @@ try {
       // Shutter click listener
       captureBtn.addEventListener('click', () => {
         if (captureBtn.disabled) return;
+
+        // Instant client-side limit check
+        if (currentPhotoCount >= photoLimit) {
+          alert(`Anda telah mencapai batas maksimal ${photoLimit} foto!`);
+          return;
+        }
         
         if (timerValue > 0) {
           runCountdown(timerValue, () => capturePhoto(guest));
@@ -389,6 +411,85 @@ try {
       }, 1000);
     }
 
+    // Helper to render a temporary uploading polaroid card in gallery
+    function renderTempPolaroid(localUrl, tempId) {
+      const idx = gallery.children.length;
+      const rot = ((idx * 7) % 11) - 5; 
+      
+      const col = document.createElement('div');
+      col.id = tempId;
+      col.className = 'polaroid-frame border border-stone-200 rounded opacity-75';
+      col.style.setProperty('--rotation', `${rot}deg`);
+
+      col.innerHTML = `
+        <div class="aspect-square w-full bg-stone-850 overflow-hidden relative mb-2 flex items-center justify-center">
+          <img src="${localUrl}" class="w-full h-full object-cover blur-[1px]" alt="Foto Polaroid" />
+          <div class="absolute inset-0 flex flex-col items-center justify-center bg-black/40">
+            <i class="fa-solid fa-spinner fa-spin text-xl text-gold mb-1"></i>
+            <span class="text-[8px] text-stone-200 uppercase font-mono tracking-widest font-bold">Mengunggah...</span>
+          </div>
+        </div>
+        <div class="text-[9px] text-stone-800 font-mono tracking-widest text-center truncate uppercase">
+          MENGUNGGAH...
+        </div>
+      `;
+      // Prepend so new photos appear first in gallery
+      gallery.insertBefore(col, gallery.firstChild);
+    }
+
+    // Helper to remove temporary polaroid card
+    function removeTempPolaroid(tempId) {
+      const el = document.getElementById(tempId);
+      if (el) el.remove();
+    }
+
+    // Background upload function
+    async function uploadPhotoInBackground(blob, guest, tempId, localUrl) {
+      const form = new FormData();
+      form.append('guest', guest);
+      form.append('photos', blob, `disposable_${Date.now()}.jpg`);
+
+      try {
+        const uploadRes = await fetch('/api/camera', {
+          method: 'POST',
+          body: form,
+        });
+
+        if (uploadRes.ok) {
+          // Re-load gallery from database to get final public Supabase URLs and details
+          await loadGallery(guest);
+        } else {
+          const err = await uploadRes.json();
+          alert(err.error || 'Gagal menyimpan foto ke server.');
+          removeTempPolaroid(tempId);
+          currentPhotoCount = Math.max(0, currentPhotoCount - 1);
+          updateStats();
+        }
+      } catch (e) {
+        alert('Gagal terhubung ke server. Foto tidak tersimpan.');
+        removeTempPolaroid(tempId);
+        currentPhotoCount = Math.max(0, currentPhotoCount - 1);
+        updateStats();
+      } finally {
+        URL.revokeObjectURL(localUrl);
+      }
+    }
+
+    // Client-side stats display updater
+    function updateStats() {
+      const sisa = Math.max(0, photoLimit - currentPhotoCount);
+      photoCounter.innerText = `[ ${sisa.toString().padStart(2, '0')} ]`;
+      galleryCountLabel.innerText = `${currentPhotoCount} / ${photoLimit} Foto`;
+
+      if (currentPhotoCount >= photoLimit) {
+        captureBtn.disabled = true;
+        ledIndicator.className = 'w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_#f59e0b]';
+      } else {
+        captureBtn.disabled = false;
+        resetReadyLed();
+      }
+    }
+
     // Shutter capture and upload
     async function capturePhoto(guest) {
       // 1. Shutter Flash FX
@@ -397,73 +498,53 @@ try {
         flashOverlay.style.opacity = '0';
       }, 150);
 
-      // 2. Fetch existing photos to check limits
+      // Disable button briefly to prevent double clicks
       captureBtn.disabled = true;
       ledIndicator.className = 'w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444] animate-none';
-      
-      try {
-        const res = await fetch(`/api/camera?guest=${encodeURIComponent(guest)}`);
-        if (res.ok) {
-          const data = await res.json();
-          const photos = data.photos || [];
-          if (photos.length >= photoLimit) {
-            alert(`Anda telah mencapai batas maksimal ${photoLimit} foto!`);
-            resetReadyLed();
-            return;
-          }
-        }
 
-      } catch (err) {
-        console.error('Failed verification:', err);
-      }
+      // 2. Increment client counter immediately
+      currentPhotoCount++;
+      updateStats();
 
       // 3. Draw image to canvas
       const ctx = canvas.getContext('2d');
       canvas.width = video.videoWidth || 640;
       canvas.height = video.videoHeight || 480;
 
-      // Handle mirroring context flip if mirroring is active
       if (isMirrored) {
         ctx.translate(canvas.width, 0);
         ctx.scale(-1, 1);
       }
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      
-      // Reset transform just in case
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
 
-      // 4. Convert and upload
-      loadingOverlay.style.opacity = '1';
-      canvas.toBlob(async (blob) => {
+      // 4. Convert to blob and process
+      canvas.toBlob((blob) => {
         if (!blob) {
           alert('Format data foto rusak.');
+          currentPhotoCount = Math.max(0, currentPhotoCount - 1);
+          updateStats();
           resetReadyLed();
-          loadingOverlay.style.opacity = '0';
           return;
         }
 
-        const form = new FormData();
-        form.append('guest', guest);
-        form.append('photos', blob, `disposable_${Date.now()}.jpg`);
+        // Generate temporary ID and local object URL for instant rendering
+        const tempId = 'temp_' + Date.now();
+        const localUrl = URL.createObjectURL(blob);
 
-        try {
-          const uploadRes = await fetch('/api/camera', {
-            method: 'POST',
-            body: form,
-          });
+        // Render instant preview in gallery
+        renderTempPolaroid(localUrl, tempId);
 
-          if (uploadRes.ok) {
-            await loadGallery(guest);
-          } else {
-            const err = await uploadRes.json();
-            alert(err.error || 'Gagal menyimpan foto.');
+        // Enable capture again immediately for seamless UX!
+        setTimeout(() => {
+          if (currentPhotoCount < photoLimit) {
+            captureBtn.disabled = false;
+            resetReadyLed();
           }
-        } catch (e) {
-          alert('Masalah koneksi jaringan ke server.');
-        } finally {
-          resetReadyLed();
-          loadingOverlay.style.opacity = '0';
-        }
+        }, 800); // 800ms throttle to prevent button mash but keep it fast
+
+        // Kick off background upload
+        uploadPhotoInBackground(blob, guest, tempId, localUrl);
       }, 'image/jpeg', 0.85);
     }
 
@@ -480,10 +561,8 @@ try {
         const { photos, deletionCount } = await res.json();
         
         // Update stats
-        const currentCount = photos.length || 0;
-        const sisa = Math.max(0, photoLimit - currentCount);
-        photoCounter.innerText = `[ ${sisa.toString().padStart(2, '0')} ]`;
-        galleryCountLabel.innerText = `${currentCount} / ${photoLimit} Foto`;
+        currentPhotoCount = photos.length || 0;
+        updateStats();
 
         const deleteCountLabel = document.getElementById('delete-count');
         if (deleteCountLabel) {
@@ -493,14 +572,6 @@ try {
           } else {
             deleteCountLabel.style.display = 'none';
           }
-        }
-
-        if (currentCount >= photoLimit) {
-          captureBtn.disabled = true;
-          ledIndicator.className = 'w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_#f59e0b]';
-        } else {
-          captureBtn.disabled = false;
-          resetReadyLed();
         }
 
         // Render photoPolaroids
@@ -517,7 +588,7 @@ try {
           col.style.setProperty('--rotation', `${rot}deg`);
 
           col.innerHTML = `
-            <div class="aspect-square w-full bg-stone-850 overflow-hidden relative mb-2">
+            <div class="polaroid-image-wrapper aspect-square w-full bg-stone-850 overflow-hidden relative mb-2 cursor-pointer" data-url="${p.url}" data-time="${timeStr}">
               <img src="${p.url}" class="w-full h-full object-cover" alt="Foto Polaroid" />
               ${allowDeletePhoto ? `
               <button 
@@ -576,6 +647,46 @@ try {
         alert('Kesalahan koneksi saat menghapus foto.');
         btn.disabled = false;
         btn.innerHTML = originalHtml;
+      }
+    });
+
+    // Preview modal elements and event handlers
+    const previewModal = document.getElementById('preview-modal');
+    const modalImg = document.getElementById('modal-preview-img');
+    const modalTime = document.getElementById('modal-preview-time');
+    const closePreviewBtn = document.getElementById('close-preview-btn');
+
+    // Click wrapper to preview image
+    gallery.addEventListener('click', (e) => {
+      // Exclude delete button click
+      if (e.target.closest('.user-photo-delete-btn')) {
+        return;
+      }
+
+      const wrapper = e.target.closest('.polaroid-image-wrapper');
+      if (!wrapper) return;
+
+      const url = wrapper.getAttribute('data-url');
+      const time = wrapper.getAttribute('data-time');
+
+      if (url && previewModal && modalImg && modalTime) {
+        modalImg.src = url;
+        modalTime.innerText = time || '';
+        previewModal.classList.remove('opacity-0', 'pointer-events-none');
+      }
+    });
+
+    // Close preview button listener
+    closePreviewBtn?.addEventListener('click', () => {
+      if (previewModal) {
+        previewModal.classList.add('opacity-0', 'pointer-events-none');
+      }
+    });
+
+    // Close preview on background overlay click
+    previewModal?.addEventListener('click', (e) => {
+      if (e.target === previewModal) {
+        previewModal.classList.add('opacity-0', 'pointer-events-none');
       }
     });
   </script>
