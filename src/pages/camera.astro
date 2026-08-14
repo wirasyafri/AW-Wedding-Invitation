@@ -165,6 +165,88 @@ try {
           </div>
         </div>
 
+        <!-- Section 3: Voice Greeting / Record Section -->
+        <div id="voice-record-card" class="w-full bg-stone-900 border border-stone-850 rounded-[2rem] p-6 shadow-2xl space-y-4">
+          <div class="flex items-center gap-3 border-b border-stone-800 pb-3">
+            <div class="w-8 h-8 rounded-full bg-gold/10 border border-gold/30 flex items-center justify-center text-gold text-xs">
+              <i class="fa-solid fa-microphone"></i>
+            </div>
+            <div class="text-left">
+              <h3 class="font-cinzel text-xs text-gold uppercase tracking-wider font-bold">Pesan Suara untuk Mempelai</h3>
+              <p class="text-[9px] text-stone-500 mt-0.5">Berikan ucapan suara spesial Anda yang akan tampil di undangan.</p>
+            </div>
+          </div>
+
+          <!-- State: Ready to Record -->
+          <div id="voice-state-ready" class="flex flex-col items-center justify-center py-4 space-y-3">
+            <button id="btn-record-start" class="w-14 h-14 rounded-full bg-gradient-to-r from-gold-light via-gold to-gold-dark hover:scale-105 active:scale-95 text-stone-950 flex items-center justify-center transition cursor-pointer shadow-lg">
+              <i class="fa-solid fa-microphone text-lg"></i>
+            </button>
+            <span class="text-[10px] text-stone-400 tracking-wider font-medium">Tekan untuk mulai merekam (Maks. 60 detik)</span>
+          </div>
+
+          <!-- State: Recording in Progress -->
+          <div id="voice-state-recording" class="hidden flex flex-col items-center justify-center py-4 space-y-4">
+            <div class="flex items-center gap-3 bg-red-950/20 border border-red-900/30 px-4 py-2 rounded-full">
+              <div class="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping"></div>
+              <span id="recording-timer" class="font-mono text-xs text-red-400 font-bold">00:00</span>
+            </div>
+            
+            <!-- Animated dancing audio waves -->
+            <div class="flex items-end justify-center gap-1 h-6">
+              <div class="w-1 bg-gold rounded-full audio-wave-bar" style="--height: 12px; animation: bounce-wave 0.5s ease-in-out infinite alternate;"></div>
+              <div class="w-1 bg-gold rounded-full audio-wave-bar" style="--height: 24px; animation: bounce-wave 0.4s ease-in-out infinite alternate 0.1s;"></div>
+              <div class="w-1 bg-gold rounded-full audio-wave-bar" style="--height: 16px; animation: bounce-wave 0.6s ease-in-out infinite alternate 0.2s;"></div>
+              <div class="w-1 bg-gold rounded-full audio-wave-bar" style="--height: 20px; animation: bounce-wave 0.3s ease-in-out infinite alternate 0.15s;"></div>
+              <div class="w-1 bg-gold rounded-full audio-wave-bar" style="--height: 8px; animation: bounce-wave 0.5s ease-in-out infinite alternate 0.05s;"></div>
+            </div>
+
+            <button id="btn-record-stop" class="px-5 py-2 rounded-full border border-red-500/30 hover:bg-red-950/20 text-red-400 text-[10px] font-cinzel font-bold uppercase tracking-wider transition cursor-pointer flex items-center gap-1.5 active:scale-95">
+              <i class="fa-solid fa-square text-[9px]"></i> Hentikan Rekaman
+            </button>
+          </div>
+
+          <!-- State: Preview & Action -->
+          <div id="voice-state-preview" class="hidden flex flex-col items-center justify-center py-4 space-y-4">
+            <div class="w-full flex items-center justify-center">
+              <audio id="audio-preview" controls class="w-full max-w-[280px] bg-stone-950 border border-stone-850 rounded-lg text-stone-200 h-10 outline-none"></audio>
+            </div>
+            <div class="flex gap-3 w-full max-w-[280px]">
+              <button id="btn-voice-cancel" class="flex-1 py-2.5 font-cinzel text-[10px] uppercase tracking-wider text-stone-400 border border-stone-800 rounded-lg hover:bg-stone-850 hover:text-stone-200 transition cursor-pointer font-bold text-center">
+                Rekam Ulang
+              </button>
+              <button id="btn-voice-upload" class="flex-1 py-2.5 font-cinzel text-[10px] uppercase tracking-wider text-stone-950 bg-gradient-to-r from-gold-light via-gold to-gold-dark rounded-lg hover:opacity-90 transition cursor-pointer font-bold text-center flex items-center justify-center gap-1">
+                <i class="fa-solid fa-cloud-arrow-up"></i> Simpan Suara
+              </button>
+            </div>
+          </div>
+
+          <!-- State: Uploading -->
+          <div id="voice-state-uploading" class="hidden flex flex-col items-center justify-center py-6 space-y-3">
+            <i class="fa-solid fa-spinner fa-spin text-2xl text-gold animate-bounce"></i>
+            <span class="text-[10px] font-cinzel tracking-widest text-stone-400 uppercase">Mengunggah Rekaman...</span>
+          </div>
+
+          <!-- State: Active Wish Voice Greeting -->
+          <div id="voice-state-active" class="hidden flex flex-col items-center justify-center py-4 space-y-4 text-center">
+            <div class="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-lg mx-auto">
+              <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <div>
+              <p class="text-[11px] font-bold text-stone-200">Rekaman Suara Anda Aktif!</p>
+              <p class="text-[9px] text-emerald-400 mt-0.5">Pesan suara Anda akan diputar di daftar ucapan undangan.</p>
+            </div>
+            
+            <div class="w-full flex items-center justify-center">
+              <audio id="audio-active" controls class="w-full max-w-[280px] bg-stone-950 border border-stone-850 rounded-lg text-stone-200 h-10 outline-none"></audio>
+            </div>
+
+            <button id="btn-voice-delete" class="text-red-400 hover:text-red-300 hover:underline text-[9px] uppercase tracking-wider font-bold cursor-pointer transition flex items-center gap-1 active:scale-95">
+              <i class="fa-solid fa-trash-can text-[9px]"></i> Hapus & Rekam Ulang
+            </button>
+          </div>
+        </div>
+
         <canvas id="capture-canvas" class="hidden"></canvas>
 
         <!-- Preview Modal Overlay -->
@@ -216,6 +298,17 @@ try {
     .polaroid-frame:hover {
       transform: scale(1.05) rotate(0deg) !important;
       z-index: 10;
+    }
+    @keyframes bounce-wave {
+      0% {
+        height: 4px;
+      }
+      100% {
+        height: var(--height, 20px);
+      }
+    }
+    .audio-wave-bar {
+      transition: height 0.1s ease;
     }
   </style>
 
@@ -276,8 +369,17 @@ try {
       e.preventDefault();
       const val = guestInput.value.trim();
       if (!val) return;
-      localStorage.setItem(guestKey, val);
-      activeGuest = val;
+      
+      // Generate a unique suffix for the typed name
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      let suffix = '';
+      for (let i = 0; i < 4; i++) {
+        suffix += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      const uniqueId = `${val}#${suffix}`;
+      
+      localStorage.setItem(guestKey, uniqueId);
+      activeGuest = uniqueId;
       nameSection.style.display = 'none';
       initCamera(activeGuest);
     });
@@ -366,7 +468,7 @@ try {
 
     // Initialize disposable camera
     async function initCamera(guest) {
-      userDisplay.innerText = guest;
+      userDisplay.innerText = guest.split('#')[0];
       cameraSection.style.display = 'block';
       
       // Load current gallery
@@ -374,6 +476,9 @@ try {
       
       // Start camera feed
       await startCameraStream(facingMode);
+
+      // Load guest voice greeting
+      await loadGuestVoice(guest);
 
       // Shutter click listener
       captureBtn.addEventListener('click', () => {
@@ -689,6 +794,205 @@ try {
     previewModal?.addEventListener('click', (e) => {
       if (e.target === previewModal) {
         previewModal.classList.add('opacity-0', 'pointer-events-none');
+      }
+    });
+
+    // --- Voice Recording Subsystem ---
+    const voiceCard = document.getElementById('voice-record-card');
+    const stateReady = document.getElementById('voice-state-ready');
+    const stateRecording = document.getElementById('voice-state-recording');
+    const statePreview = document.getElementById('voice-state-preview');
+    const stateUploading = document.getElementById('voice-state-uploading');
+    const stateActive = document.getElementById('voice-state-active');
+
+    const btnRecordStart = document.getElementById('btn-record-start');
+    const btnRecordStop = document.getElementById('btn-record-stop');
+    const btnVoiceCancel = document.getElementById('btn-voice-cancel');
+    const btnVoiceUpload = document.getElementById('btn-voice-upload');
+    const btnVoiceDelete = document.getElementById('btn-voice-delete');
+
+    const recordingTimer = document.getElementById('recording-timer');
+    const audioPreview = document.getElementById('audio-preview');
+    const audioActive = document.getElementById('audio-active');
+
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let recordTimerInterval = null;
+    let recordStartTime = 0;
+    let recordedBlob = null;
+    let audioUrl = null;
+
+    async function loadGuestVoice(guest) {
+      try {
+        const res = await fetch(`/api/voice?guest=${encodeURIComponent(guest)}`);
+        if (!res.ok) return;
+        const { voice } = await res.json();
+        
+        showVoiceState(voice ? 'active' : 'ready');
+        if (voice) {
+          audioActive.src = voice.url;
+        }
+      } catch (err) {
+        console.error('Error loading guest voice:', err);
+      }
+    }
+
+    function showVoiceState(state) {
+      stateReady.classList.add('hidden');
+      stateRecording.classList.add('hidden');
+      statePreview.classList.add('hidden');
+      stateUploading.classList.add('hidden');
+      stateActive.classList.add('hidden');
+
+      if (state === 'ready') stateReady.classList.remove('hidden');
+      else if (state === 'recording') stateRecording.classList.remove('hidden');
+      else if (state === 'preview') statePreview.classList.remove('hidden');
+      else if (state === 'uploading') stateUploading.classList.remove('hidden');
+      else if (state === 'active') stateActive.classList.remove('hidden');
+    }
+
+    btnRecordStart.addEventListener('click', async () => {
+      audioChunks = [];
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        
+        // Find supported mimetype
+        let mimeType = '';
+        if (MediaRecorder.isTypeSupported('audio/webm')) {
+          mimeType = 'audio/webm';
+        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+          mimeType = 'audio/mp4';
+        } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
+          mimeType = 'audio/ogg';
+        } else if (MediaRecorder.isTypeSupported('audio/wav')) {
+          mimeType = 'audio/wav';
+        }
+
+        const options = mimeType ? { mimeType } : {};
+        mediaRecorder = new MediaRecorder(stream, options);
+        
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            audioChunks.push(event.data);
+          }
+        };
+
+        mediaRecorder.onstop = () => {
+          recordedBlob = new Blob(audioChunks, { type: mimeType || 'audio/webm' });
+          if (audioUrl) {
+            URL.revokeObjectURL(audioUrl);
+          }
+          audioUrl = URL.createObjectURL(recordedBlob);
+          audioPreview.src = audioUrl;
+          
+          // Stop stream tracks to release microphone icon
+          stream.getTracks().forEach(track => track.stop());
+          
+          showVoiceState('preview');
+        };
+
+        // Start recording
+        mediaRecorder.start();
+        recordStartTime = Date.now();
+        showVoiceState('recording');
+        
+        // Update timer every second
+        recordingTimer.innerText = '00:00';
+        recordTimerInterval = setInterval(() => {
+          const elapsed = Math.floor((Date.now() - recordStartTime) / 1000);
+          const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
+          const secs = String(elapsed % 60).padStart(2, '0');
+          recordingTimer.innerText = `${mins}:${secs}`;
+          
+          // Enforce 60 seconds limit
+          if (elapsed >= 60) {
+            stopRecording();
+          }
+        }, 1000);
+
+      } catch (err) {
+        alert('Gagal mengakses mikrofon. Silakan izinkan akses mikrofon di browser Anda untuk merekam pesan suara.');
+        console.error('Microphone access error:', err);
+      }
+    });
+
+    function stopRecording() {
+      if (recordTimerInterval) {
+        clearInterval(recordTimerInterval);
+      }
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+    }
+
+    btnRecordStop.addEventListener('click', () => {
+      stopRecording();
+    });
+
+    btnVoiceCancel.addEventListener('click', () => {
+      if (audioUrl) {
+        URL.revokeObjectURL(audioUrl);
+        audioUrl = null;
+      }
+      recordedBlob = null;
+      showVoiceState('ready');
+    });
+
+    btnVoiceUpload.addEventListener('click', async () => {
+      if (!recordedBlob || !activeGuest) return;
+
+      showVoiceState('uploading');
+      
+      const fileExt = (recordedBlob.type.split(';')[0] || 'audio/webm').split('/')[1] || 'webm';
+      const file = new File([recordedBlob], `voice_${Date.now()}.${fileExt}`, { type: recordedBlob.type });
+
+      const form = new FormData();
+      form.append('guest', activeGuest);
+      form.append('audio', file);
+
+      try {
+        const res = await fetch('/api/voice', {
+          method: 'POST',
+          body: form
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          audioActive.src = data.voice.url;
+          showVoiceState('active');
+        } else {
+          const err = await res.json();
+          alert(err.error || 'Gagal mengunggah pesan suara.');
+          showVoiceState('preview');
+        }
+      } catch (err) {
+        alert('Terjadi kesalahan koneksi saat mengunggah.');
+        showVoiceState('preview');
+      }
+    });
+
+    btnVoiceDelete.addEventListener('click', async () => {
+      if (!activeGuest) return;
+      if (!confirm('Apakah Anda yakin ingin menghapus rekaman suara ini?')) return;
+
+      showVoiceState('uploading');
+
+      try {
+        const res = await fetch(`/api/voice?guest=${encodeURIComponent(activeGuest)}`, {
+          method: 'DELETE'
+        });
+
+        if (res.ok) {
+          audioActive.src = '';
+          showVoiceState('ready');
+        } else {
+          const err = await res.json();
+          alert(err.error || 'Gagal menghapus rekaman suara.');
+          showVoiceState('active');
+        }
+      } catch (err) {
+        alert('Terjadi kesalahan koneksi saat menghapus.');
+        showVoiceState('active');
       }
     });
   </script>

@@ -8,6 +8,7 @@ let wishes: any[] = [];
 let cameraPhotos: any[] = [];
 let errorMessage = '';
 let passwordVal = '';
+let guestVoicesMap = new Map<string, string>();
 
 const adminPassword = import.meta.env.ADMIN_PASSWORD;
 
@@ -69,30 +70,95 @@ if (Astro.request.method === 'POST') {
 
             // Execute moderation actions if provided
             if (action === 'toggle' && wishId) {
-                const { data: currentWish, error: getError } = await supabase
-                    .from('wishes')
-                    .select('is_visible')
-                    .eq('id', wishId)
-                    .single();
-                if (getError) {
-                    errorMessage = 'Gagal memuat ucapan: ' + getError.message;
-                }
-                if (currentWish) {
-                    const { error: updateError } = await supabase
+                if (String(wishId).startsWith('voice_')) {
+                    const voiceId = wishId.split('_')[1];
+                    const { data: currentVoice, error: getError } = await supabase
+                        .from('guest_voices')
+                        .select('is_visible')
+                        .eq('id', voiceId)
+                        .single();
+                    if (getError) {
+                        errorMessage = 'Gagal memuat pesan suara: ' + getError.message;
+                    }
+                    if (currentVoice) {
+                        const { error: updateError } = await supabase
+                            .from('guest_voices')
+                            .update({ is_visible: !currentVoice.is_visible })
+                            .eq('id', voiceId);
+                        if (updateError) {
+                            errorMessage = 'Gagal memperbarui pesan suara: ' + updateError.message;
+                        }
+                    }
+                } else {
+                    const { data: currentWish, error: getError } = await supabase
                         .from('wishes')
-                        .update({ is_visible: !currentWish.is_visible })
-                        .eq('id', wishId);
-                    if (updateError) {
-                        errorMessage = 'Gagal memperbarui ucapan: ' + updateError.message;
+                        .select('is_visible')
+                        .eq('id', wishId)
+                        .single();
+                    if (getError) {
+                        errorMessage = 'Gagal memuat ucapan: ' + getError.message;
+                    }
+                    if (currentWish) {
+                        const { error: updateError } = await supabase
+                            .from('wishes')
+                            .update({ is_visible: !currentWish.is_visible })
+                            .eq('id', wishId);
+                        if (updateError) {
+                            errorMessage = 'Gagal memperbarui ucapan: ' + updateError.message;
+                        }
                     }
                 }
             } else if (action === 'delete' && wishId) {
-                const { error: deleteError } = await supabase
-                    .from('wishes')
-                    .delete()
-                    .eq('id', wishId);
-                if (deleteError) {
-                    errorMessage = 'Gagal menghapus ucapan: ' + deleteError.message;
+                if (String(wishId).startsWith('voice_')) {
+                    const voiceId = wishId.split('_')[1];
+                    // Retrieve url first to remove from storage
+                    const { data: voiceRecord, error: getError } = await supabase
+                        .from('guest_voices')
+                        .select('url')
+                        .eq('id', voiceId)
+                        .single();
+                    if (!getError && voiceRecord) {
+                        const urlParts = voiceRecord.url.split('/disposable-camera/');
+                        if (urlParts.length >= 2) {
+                            const filePath = decodeURIComponent(urlParts[1]);
+                            await supabase.storage.from('disposable-camera').remove([filePath]);
+                        }
+                    }
+                    const { error: deleteError } = await supabase
+                        .from('guest_voices')
+                        .delete()
+                        .eq('id', voiceId);
+                    if (deleteError) {
+                        errorMessage = 'Gagal menghapus pesan suara: ' + deleteError.message;
+                    }
+                } else {
+                    const { error: deleteError } = await supabase
+                        .from('wishes')
+                        .delete()
+                        .eq('id', wishId);
+                    if (deleteError) {
+                        errorMessage = 'Gagal menghapus ucapan: ' + deleteError.message;
+                    }
+                }
+            }
+
+            // Fetch guest voices
+            const { data: dbVoices } = await supabase
+                .from('guest_voices')
+                .select('id, guest_id, url, created_at, is_visible');
+            
+            const voiceByGuestIdMap = new Map();
+            const voiceByFriendlyNameMap = new Map();
+
+            if (dbVoices) {
+                for (const voice of dbVoices) {
+                    guestVoicesMap.set(voice.guest_id.trim().toLowerCase(), voice.url);
+                    
+                    const fullId = voice.guest_id.trim().toLowerCase();
+                    voiceByGuestIdMap.set(fullId, voice);
+                    
+                    const friendlyName = voice.guest_id.split('#')[0].trim().toLowerCase();
+                    voiceByFriendlyNameMap.set(friendlyName, voice);
                 }
             }
 
@@ -102,9 +168,61 @@ if (Astro.request.method === 'POST') {
                 .select('*')
                 .order('created_at', { ascending: false });
 
+            let rawWishes: any[] = [];
             if (!error && dbWishes) {
-                wishes = dbWishes;
+                rawWishes = dbWishes.map((w: any) => {
+                    let voiceUrl = null;
+                    if (w.guest_id) {
+                        const key = w.guest_id.trim().toLowerCase();
+                        voiceUrl = voiceByGuestIdMap.get(key)?.url || null;
+                    }
+                    if (!voiceUrl) {
+                        const key = (w.name || '').trim().toLowerCase();
+                        voiceUrl = voiceByFriendlyNameMap.get(key)?.url || null;
+                    }
+                    return {
+                        ...w,
+                        voice_url: voiceUrl
+                    };
+                });
             }
+
+            // Generate virtual wishes for voice greetings without matching text wish
+            const wishGuestIdsAndNames = new Set();
+            if (dbWishes) {
+                for (const wish of dbWishes) {
+                    if (wish.guest_id) {
+                        wishGuestIdsAndNames.add(wish.guest_id.trim().toLowerCase());
+                    }
+                    wishGuestIdsAndNames.add((wish.name || '').trim().toLowerCase());
+                }
+            }
+
+            const virtualWishes: any[] = [];
+            if (dbVoices) {
+                for (const voice of dbVoices) {
+                    const fullId = voice.guest_id.trim().toLowerCase();
+                    const friendlyName = voice.guest_id.split('#')[0];
+                    const friendlyNameLower = friendlyName.trim().toLowerCase();
+
+                    if (!wishGuestIdsAndNames.has(fullId) && !wishGuestIdsAndNames.has(friendlyNameLower)) {
+                        virtualWishes.push({
+                            id: `voice_${voice.id}`, // String ID for virtual wishes
+                            name: friendlyName,
+                            status: 'Hadir',
+                            message: '', // Empty message indicating voice-only
+                            likes: 0,
+                            is_visible: voice.is_visible ?? true,
+                            created_at: voice.created_at,
+                            guest_id: voice.guest_id,
+                            voice_url: voice.url
+                        });
+                    }
+                }
+            }
+
+            wishes = [...rawWishes, ...virtualWishes];
+            wishes.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
             // Fetch settings
             const { data: dbSettings } = await supabase
@@ -293,7 +411,23 @@ function parseUtcIsoToLocal(utcIso: string) {
                                 <tbody class="divide-y divide-stone-800/60 text-xs">
                                     {wishes.map((wish) => (
                                         <tr class={`transition-colors hover:bg-stone-800/20 ${!wish.is_visible ? 'opacity-60 bg-stone-950/20' : ''}`}>
-                                            <td class="py-4 px-6 font-bold text-stone-200">{wish.name}</td>
+                                            <td class="py-4 px-6 font-bold text-stone-200">
+                                                <div class="flex items-center gap-2">
+                                                    <span>{wish.name}</span>
+                                                    {wish.guest_id && wish.guest_id.includes('#') && (
+                                                        <span class="text-[9px] text-stone-500 font-mono italic" title="Unique ID">#{wish.guest_id.split('#')[1]}</span>
+                                                    )}
+                                                    {wish.voice_url && (
+                                                        <button 
+                                                            class="admin-voice-play-btn w-6 h-6 rounded-full bg-gold/10 hover:bg-gold/25 text-gold border border-gold/30 flex items-center justify-center transition cursor-pointer active:scale-90"
+                                                            data-voice-url={wish.voice_url}
+                                                            title="Putar Pesan Suara"
+                                                        >
+                                                            <i class="fa-solid fa-play text-[8px] translate-x-px"></i>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
                                             <td class="py-4 px-6 text-center">
                                                 <span class={`px-2 py-0.5 rounded text-[10px] border ${
                                                     wish.status === 'Hadir' 
@@ -303,23 +437,35 @@ function parseUtcIsoToLocal(utcIso: string) {
                                                     {wish.status}
                                                 </span>
                                             </td>
-                                            <td class="py-4 px-6 text-center font-mono text-stone-400">{wish.guests || '1 Orang'}</td>
-                                            <td class="py-4 px-6 text-stone-300 max-w-xs truncate" title={wish.message}>{wish.message}</td>
+                                                                            <td class="py-4 px-6 text-center font-mono text-stone-400">{wish.guests || '1 Orang'}</td>
+                                            <td class="py-4 px-6 text-stone-300 max-w-xs truncate" title={wish.message || 'Pesan Suara (Voice-Only)'}>
+                                                {wish.message ? wish.message : (
+                                                    <span class="text-stone-500 italic flex items-center gap-1">
+                                                        <i class="fa-solid fa-volume-high text-[10px] text-gold/60"></i> Pesan Suara (Voice-Only)
+                                                    </span>
+                                                )}
+                                            </td>
                                             <td class="py-4 px-6 text-center font-mono text-rose-400">
-                                                <i class="fa-solid fa-heart text-[10px] mr-1"></i> {wish.likes || 0}
+                                                {!String(wish.id).startsWith('voice_') ? (
+                                                    <span><i class="fa-solid fa-heart text-[10px] mr-1"></i> {wish.likes || 0}</span>
+                                                ) : (
+                                                    <span class="text-stone-600">-</span>
+                                                )}
                                             </td>
                                             <td class="py-4 px-6 text-center">
                                                 <div class="inline-flex gap-2">
-                                                    <button 
-                                                        data-wish-id={wish.id}
-                                                        class={`wish-toggle-btn px-3 py-1.5 rounded text-[10px] font-cinzel tracking-wider uppercase font-bold cursor-pointer transition ${
-                                                            wish.is_visible 
-                                                                ? 'bg-stone-800 text-stone-400 hover:bg-amber-600 hover:text-stone-950' 
-                                                                : 'bg-amber-50 text-stone-950 hover:bg-amber-400'
-                                                        }`}
-                                                    >
-                                                        {wish.is_visible ? 'Sembunyikan' : 'Tampilkan'}
-                                                    </button>
+                                                    {!String(wish.id).startsWith('voice_') && (
+                                                        <button 
+                                                            data-wish-id={wish.id}
+                                                            class={`wish-toggle-btn px-3 py-1.5 rounded text-[10px] font-cinzel tracking-wider uppercase font-bold cursor-pointer transition ${
+                                                                wish.is_visible 
+                                                                    ? 'bg-stone-800 text-stone-400 hover:bg-amber-600 hover:text-stone-950' 
+                                                                    : 'bg-amber-50 text-stone-950 hover:bg-amber-400'
+                                                            }`}
+                                                        >
+                                                            {wish.is_visible ? 'Sembunyikan' : 'Tampilkan'}
+                                                        </button>
+                                                    )}
                                                     <button 
                                                         data-wish-id={wish.id}
                                                         data-wish-name={wish.name}
@@ -656,40 +802,55 @@ function parseUtcIsoToLocal(utcIso: string) {
                                 </div>
                             ) : (
                                 <div class="space-y-8">
-                                    {Object.entries(photosByGuest).map(([guestName, photos]: [string, any]) => (
-                                        <div class="border border-stone-800/60 bg-stone-950/40 rounded-xl p-5 space-y-4">
-                                            <div class="flex items-center justify-between border-b border-stone-800 pb-2">
-                                                <div class="flex items-center gap-2">
-                                                    <div class="w-2 h-2 rounded-full bg-gold"></div>
-                                                    <h3 class="font-cinzel text-sm text-stone-200 font-bold tracking-wide">{guestName}</h3>
-                                                </div>
-                                                <span class="text-[10px] text-stone-500 font-mono">{photos.length} Foto</span>
-                                            </div>
-
-                                            <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
-                                                {photos.map((photo: any) => (
-                                                    <div class="group relative aspect-square bg-stone-900 border border-stone-800 rounded-lg overflow-hidden shadow-lg hover:scale-[1.03] transition-all" data-photo-card-id={photo.id}>
-                                                        <img src={photo.url} class="w-full h-full object-cover" alt={`Foto dari ${guestName}`} loading="lazy" />
-                                                        <a 
-                                                            href={photo.url} 
-                                                            target="_blank" 
-                                                            rel="noopener noreferrer" 
-                                                            class="absolute inset-0 bg-stone-950/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-stone-200 text-xs font-cinzel uppercase tracking-wider transition-opacity duration-200"
-                                                        >
-                                                            Buka Foto
-                                                        </a>
-                                                        <button 
-                                                            class="admin-photo-delete-btn absolute top-2 right-2 z-20 w-7 h-7 bg-red-950/80 hover:bg-red-600 border border-red-900/40 text-red-400 hover:text-white rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md opacity-0 group-hover:opacity-100"
-                                                            data-photo-id={photo.id}
-                                                            title="Hapus Foto Secara Permanen"
-                                                        >
-                                                            <i class="fa-solid fa-trash-can text-[10px]"></i>
-                                                        </button>
+                                    {Object.entries(photosByGuest).map(([guestName, photos]: [string, any]) => {
+                                        const guestVoiceUrl = guestVoicesMap.get(guestName.trim().toLowerCase());
+                                        return (
+                                            <div class="border border-stone-800/60 bg-stone-950/40 rounded-xl p-5 space-y-4">
+                                                <div class="flex items-center justify-between border-b border-stone-800 pb-2">
+                                                    <div class="flex items-center gap-2">
+                                                        <div class="w-2 h-2 rounded-full bg-gold"></div>
+                                                        <h3 class="font-cinzel text-sm text-stone-200 font-bold tracking-wide">{guestName.split('#')[0]}</h3>
+                                                        {guestName.includes('#') && (
+                                                            <span class="text-[10px] text-stone-500 font-mono italic" title="Unique ID">#{guestName.split('#')[1]}</span>
+                                                        )}
+                                                        {guestVoiceUrl && (
+                                                            <button 
+                                                                class="admin-voice-play-btn w-6 h-6 rounded-full bg-gold/10 hover:bg-gold/25 text-gold border border-gold/30 flex items-center justify-center transition cursor-pointer active:scale-90"
+                                                                data-voice-url={guestVoiceUrl}
+                                                                title="Putar Pesan Suara Tamu"
+                                                            >
+                                                                <i class="fa-solid fa-play text-[8px] translate-x-px"></i>
+                                                            </button>
+                                                        )}
                                                     </div>
-                                                ))}
+                                                    <span class="text-[10px] text-stone-500 font-mono">{photos.length} Foto</span>
+                                                </div>
+
+                                                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
+                                                    {photos.map((photo: any) => (
+                                                        <div class="group relative aspect-square bg-stone-900 border border-stone-800 rounded-lg overflow-hidden shadow-lg hover:scale-[1.03] transition-all" data-photo-card-id={photo.id}>
+                                                            <img src={photo.url} class="w-full h-full object-cover" alt={`Foto dari ${guestName}`} loading="lazy" />
+                                                            <a 
+                                                                href={photo.url} 
+                                                                target="_blank" 
+                                                                rel="noopener noreferrer" 
+                                                                class="absolute inset-0 bg-stone-950/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-stone-200 text-xs font-cinzel uppercase tracking-wider transition-opacity duration-200"
+                                                            >
+                                                                Buka Foto
+                                                            </a>
+                                                            <button 
+                                                                class="admin-photo-delete-btn absolute top-2 right-2 z-20 w-7 h-7 bg-red-950/80 hover:bg-red-600 border border-red-900/40 text-red-400 hover:text-white rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md opacity-0 group-hover:opacity-100"
+                                                                data-photo-id={photo.id}
+                                                                title="Hapus Foto Secara Permanen"
+                                                            >
+                                                                <i class="fa-solid fa-trash-can text-[10px]"></i>
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
@@ -1109,5 +1270,45 @@ function parseUtcIsoToLocal(utcIso: string) {
             btn.disabled = false;
             btn.innerHTML = originalHtml;
         }
+    });
+
+    // Admin Voice Playback logic
+    let adminPlayingAudio = null;
+    let adminPlayingBtn = null;
+
+    document.querySelectorAll('.admin-voice-play-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const url = btn.getAttribute('data-voice-url');
+            if (!url) return;
+
+            if (adminPlayingBtn === btn) {
+                if (adminPlayingAudio.paused) {
+                    adminPlayingAudio.play();
+                    btn.innerHTML = '<i class="fa-solid fa-pause text-[8px]"></i>';
+                } else {
+                    adminPlayingAudio.pause();
+                    btn.innerHTML = '<i class="fa-solid fa-play text-[8px] translate-x-px"></i>';
+                }
+                return;
+            }
+
+            if (adminPlayingAudio) {
+                adminPlayingAudio.pause();
+                if (adminPlayingBtn) {
+                    adminPlayingBtn.innerHTML = '<i class="fa-solid fa-play text-[8px] translate-x-px"></i>';
+                }
+            }
+
+            adminPlayingAudio = new Audio(url);
+            adminPlayingBtn = btn;
+            adminPlayingAudio.play();
+            btn.innerHTML = '<i class="fa-solid fa-pause text-[8px]"></i>';
+
+            adminPlayingAudio.addEventListener('ended', () => {
+                btn.innerHTML = '<i class="fa-solid fa-play text-[8px] translate-x-px"></i>';
+                adminPlayingAudio = null;
+                adminPlayingBtn = null;
+            });
+        });
     });
 </script>

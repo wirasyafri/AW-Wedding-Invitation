@@ -67,6 +67,7 @@ const { settings } = Astro.props;
         message: string;
         likes: number;
         guests: string;
+        voice_url?: string | null;
     }
 
     function escapeHTML(str: string) {
@@ -137,7 +138,7 @@ const { settings } = Astro.props;
                             <h4 class="font-bold text-gold text-sm">${escapeHTML(wish.name)}</h4>
                             <span class="text-[10px] ${badgeClass} px-2 py-0.5 rounded border">${wish.status}</span>
                         </div>
-                        <p class="text-stone-300 text-xs leading-relaxed">${escapeHTML(wish.message)}</p>
+                        <p class="text-stone-300 text-xs leading-relaxed mb-1">${escapeHTML(wish.message)}</p>
                     </div>
                     <div class="flex items-center justify-between mt-3 pt-2 border-t border-stone-800/40">
                         <span class="text-[10px] text-stone-500">${getRelativeTime(timeVal)}</span>
@@ -147,7 +148,8 @@ const { settings } = Astro.props;
                         </button>
                     </div>
                 </div>
-            `;        }).join('');
+            `;
+        }).join('');
 
         // Attach heart reaction event listeners
         document.querySelectorAll('.like-btn').forEach(btn => {
@@ -225,11 +227,13 @@ const { settings } = Astro.props;
 
         if (!nameElem || !statusElem || !guestsElem || !messageElem) return;
 
+        const guestId = localStorage.getItem('cameraGuest');
         const wishData = {
             name: nameElem.value,
             status: statusElem.value,
             guests: guestsElem.value,
-            message: messageElem.value
+            message: messageElem.value,
+            guest_id: guestId || null
         };
 
         // Submit to backend database API

@@ -32,13 +32,30 @@ const { settings } = Astro.props;
 </div>
 
 <script>
-    // Extract Guest Name from URL parameter (?to=Nama+Tamu)
+    // Extract Guest Name from URL parameter (?to=Nama+Tamu) and manage unique guest ID suffix
     window.addEventListener('DOMContentLoaded', () => {
         const urlParams = new URLSearchParams(window.location.search);
         const guest = urlParams.get('to');
-        const display = document.getElementById('guest-name-display');
-        if (guest && display) {
-            display.innerText = decodeURIComponent(guest);
+        if (guest) {
+            const guestName = decodeURIComponent(guest).trim();
+            const display = document.getElementById('guest-name-display');
+            if (display) {
+                display.innerText = guestName;
+            }
+
+            // Manage unique device session suffix for duplicate name handling
+            const guestKey = 'cameraGuest';
+            const storedGuest = localStorage.getItem(guestKey);
+            const isDifferentGuest = !storedGuest || storedGuest.split('#')[0].trim().toLowerCase() !== guestName.toLowerCase();
+
+            if (isDifferentGuest) {
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                let suffix = '';
+                for (let i = 0; i < 4; i++) {
+                    suffix += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                localStorage.setItem(guestKey, `${guestName}#${suffix}`);
+            }
         }
     });
 
