@@ -1,534 +1,579 @@
 ---
 // src/pages/camera.astro
-import Layout from '../layouts/Layout.astro';
-import { supabase } from '../lib/supabase.server';
+import Layout from "../layouts/Layout.astro";
+import { supabase } from "../lib/supabase.server";
 
 // Fetch active camera settings
 const defaultSettings = {
-  groom_name_short: 'Wira',
-  bride_name_short: 'Ayu',
-  camera_allow_change_guest: true,
-  camera_allow_delete_photo: true,
-  camera_photo_limit: 15,
-  camera_delete_limit: 5
+	groom_name_short: "Wira",
+	bride_name_short: "Ayu",
+	camera_allow_change_guest: true,
+	camera_allow_delete_photo: true,
+	camera_photo_limit: 15,
+	camera_delete_limit: 5,
 };
 
 let activeSettings = defaultSettings;
 try {
-  const { data: dbSettings } = await supabase
-    .from('settings')
-    .select('groom_name_short, bride_name_short, camera_allow_change_guest, camera_allow_delete_photo, camera_photo_limit, camera_delete_limit')
-    .eq('id', 1)
-    .single();
-  if (dbSettings) {
-    activeSettings = { ...defaultSettings, ...dbSettings };
-  }
+	const { data: dbSettings } = await supabase
+		.from("settings")
+		.select("groom_name_short, bride_name_short, camera_allow_change_guest, camera_allow_delete_photo, camera_photo_limit, camera_delete_limit")
+		.eq("id", 1)
+		.single();
+	if (dbSettings) {
+		activeSettings = { ...defaultSettings, ...dbSettings };
+	}
 } catch (e) {
-  console.error("Gagal memuat setting kamera:", e);
+	console.error("Gagal memuat setting kamera:", e);
 }
 ---
 
-<Layout title={`Disposable Camera - ${activeSettings.groom_name_short} & ${activeSettings.bride_name_short}`} description={`Capture your best moments at the wedding of ${activeSettings.groom_name_short} & ${activeSettings.bride_name_short}.`}>
-  <div class="min-h-screen bg-stone-950 text-stone-100 flex flex-col justify-between py-8 px-4 font-sans select-none">
-    
-    <header class="text-center max-w-md mx-auto w-full mb-4">
-      <h1 class="font-cinzel text-2xl text-gold uppercase tracking-widest font-bold">Wedding Camera</h1>
-      <p class="font-script text-xl text-gold-light mt-1">{activeSettings.groom_name_short} & {activeSettings.bride_name_short}</p>
-    </header>
+<Layout
+	title={`Disposable Camera - ${activeSettings.groom_name_short} & ${activeSettings.bride_name_short}`}
+	description={`Capture your best moments at the wedding of ${activeSettings.groom_name_short} & ${activeSettings.bride_name_short}.`}
+>
+	<div class="min-h-screen bg-stone-950 text-stone-100 flex flex-col justify-between py-8 px-4 font-sans select-none">
+		<header class="text-center max-w-md mx-auto w-full mb-4">
+			<h1 class="font-cinzel text-2xl text-gold uppercase tracking-widest font-bold">Wedding Camera</h1>
+			<p class="font-script text-xl text-gold-light mt-1">{activeSettings.groom_name_short} & {activeSettings.bride_name_short}</p>
+		</header>
 
-    <main class="flex-grow flex flex-col items-center justify-center max-w-md mx-auto w-full">
-      <!-- Section 1: Guest Login / Name Input -->
-      <section id="name-section" class="w-full bg-stone-900/80 border border-stone-800/80 rounded-2xl p-6 shadow-2xl backdrop-blur-md text-center" style="display: none;">
-        <div class="w-16 h-16 bg-gold/10 border border-gold/30 rounded-full flex items-center justify-center text-gold mx-auto mb-4 text-xl">
-          <i class="fa-solid fa-camera"></i>
-        </div>
-        <h2 class="font-cinzel text-lg text-gold mb-1 uppercase tracking-wider font-bold">Disposable Camera</h2>
-        <p class="text-stone-400 text-xs mb-6">Abadikan momen indah pernikahan kami langsung dari kamera ponsel Anda. Setiap tamu memiliki batas 15 foto.</p>
-        
-        <form id="guest-name-form" class="space-y-4">
-          <div>
-            <label for="guest-name" class="block text-left text-[10px] uppercase tracking-wider text-stone-500 mb-1">Nama Anda (Sesuai Undangan)</label>
-            <input 
-              type="text" 
-              id="guest-name" 
-              required 
-              placeholder="Masukkan nama lengkap" 
-              class="w-full bg-stone-950 border border-stone-800 rounded-lg px-4 py-3 text-center text-stone-100 placeholder-stone-600 focus:outline-none focus:border-gold transition text-sm"
-            />
-          </div>
-          <button type="submit" class="w-full py-3.5 font-cinzel text-xs uppercase tracking-widest text-stone-950 font-bold rounded-lg bg-gradient-to-r from-gold-light via-gold to-gold-dark shadow-lg hover:opacity-95 transition cursor-pointer">
-            Mulai Memotret
-          </button>
-        </form>
-      </section>
+		<main class="flex-grow flex flex-col items-center justify-center max-w-md mx-auto w-full">
+			<!-- Section 1: Guest Login / Name Input -->
+			<section id="name-section" class="w-full bg-stone-900/80 border border-stone-800/80 rounded-2xl p-6 shadow-2xl backdrop-blur-md text-center" style="display: none;">
+				<div class="w-16 h-16 bg-gold/10 border border-gold/30 rounded-full flex items-center justify-center text-gold mx-auto mb-4 text-xl">
+					<i class="fa-solid fa-camera"></i>
+				</div>
+				<h2 class="font-cinzel text-lg text-gold mb-1 uppercase tracking-wider font-bold">Disposable Camera</h2>
+				<p class="text-stone-400 text-xs mb-6">Abadikan momen indah pernikahan kami langsung dari kamera ponsel Anda. Setiap tamu memiliki batas 15 foto.</p>
 
-      <!-- Section 2: Camera View Finder & Capture Controls -->
-      <section id="camera-section" class="w-full space-y-6" style="display: none;" data-limit={activeSettings.camera_photo_limit} data-delete-limit={activeSettings.camera_delete_limit} data-allow-delete={activeSettings.camera_allow_delete_photo ? "true" : "false"} data-allow-change={activeSettings.camera_allow_change_guest ? "true" : "false"}>
-        
-        <!-- Retro Camera Body Mockup -->
-        <div class="w-full bg-stone-900 border border-stone-850 rounded-[2.5rem] shadow-2xl overflow-hidden relative border-t-8 border-t-stone-400">
-          
-          <!-- Camera Brand / Header -->
-          <div class="px-6 py-3 flex justify-between items-center bg-stone-950/40 border-b border-stone-800/60">
-            <div class="flex flex-col">
-              <span class="font-cinzel text-[10px] text-stone-500 tracking-widest font-bold">WEDDING CAM 400</span>
-              <span class="text-[8px] text-stone-400 tracking-wider">
-                {activeSettings.camera_allow_delete_photo 
-                  ? `Foto buram/salah? Hapus untuk mengulang (${activeSettings.camera_delete_limit} Kali Kesempatan)`
-                  : 'Gunakan kamera untuk mengambil foto terbaik Anda.'
-                }
-              </span>
-            </div>
-            <div class="flex items-center gap-2">
-              <div id="status-led" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_#10b981]"></div>
-              <span class="text-[9px] font-mono text-stone-400 uppercase tracking-wider">Ready</span>
-            </div>
-          </div>
+				<form id="guest-name-form" class="space-y-4">
+					<div>
+						<label for="guest-name" class="block text-left text-[10px] uppercase tracking-wider text-stone-500 mb-1">Nama Anda (Sesuai Undangan)</label>
+						<input
+							type="text"
+							id="guest-name"
+							required
+							placeholder="Masukkan nama lengkap"
+							class="w-full bg-stone-950 border border-stone-800 rounded-lg px-4 py-3 text-center text-stone-100 placeholder-stone-600 focus:outline-none focus:border-gold transition text-sm"
+						/>
+					</div>
+					<button
+						type="submit"
+						class="w-full py-3.5 font-cinzel text-xs uppercase tracking-widest text-stone-950 font-bold rounded-lg bg-gradient-to-r from-gold-light via-gold to-gold-dark shadow-lg hover:opacity-95 transition cursor-pointer"
+					>
+						Mulai Memotret
+					</button>
+				</form>
+			</section>
 
-          <!-- Viewfinder Frame -->
-          <div class="p-4 bg-stone-900">
-            <div class="relative aspect-[4/3] rounded-2xl overflow-hidden bg-black shadow-inner border border-stone-950">
-              <!-- Video Element -->
-              <video id="video-stream" autoplay playsinline class="w-full h-full object-cover"></video>
-              
-              <!-- Crosshair Overlay -->
-              <div class="absolute inset-0 border border-white/10 pointer-events-none flex items-center justify-center">
-                <div class="w-8 h-px bg-white/20"></div>
-                <div class="h-8 w-px bg-white/20"></div>
-                
-                <div class="absolute top-4 left-4 w-4 h-4 border-t border-l border-white/20"></div>
-                <div class="absolute top-4 right-4 w-4 h-4 border-t border-r border-white/20"></div>
-                <div class="absolute bottom-4 left-4 w-4 h-4 border-b border-l border-white/20"></div>
-                <div class="absolute bottom-4 right-4 w-4 h-4 border-b border-r border-white/20"></div>
-              </div>
+			<!-- Section 2: Camera View Finder & Capture Controls -->
+			<section
+				id="camera-section"
+				class="w-full space-y-6"
+				style="display: none;"
+				data-limit={activeSettings.camera_photo_limit}
+				data-delete-limit={activeSettings.camera_delete_limit}
+				data-allow-delete={activeSettings.camera_allow_delete_photo ? "true" : "false"}
+				data-allow-change={activeSettings.camera_allow_change_guest ? "true" : "false"}
+			>
+				<!-- Retro Camera Body Mockup -->
+				<div class="w-full bg-stone-900 border border-stone-850 rounded-[2.5rem] shadow-2xl overflow-hidden relative border-t-8 border-t-stone-400">
+					<!-- Camera Brand / Header -->
+					<div class="px-6 py-3 flex justify-between items-center bg-stone-950/40 border-b border-stone-800/60">
+						<div class="flex flex-col">
+							<span class="font-cinzel text-[10px] text-stone-500 tracking-widest font-bold">WEDDING CAM 400</span>
+							<span class="text-[8px] text-stone-400 tracking-wider">
+								{
+									activeSettings.camera_allow_delete_photo
+										? `Foto buram/salah? Hapus untuk mengulang (${activeSettings.camera_delete_limit} Kali Kesempatan)`
+										: "Gunakan kamera untuk mengambil foto terbaik Anda."
+								}
+							</span>
+						</div>
+						<div class="flex items-center gap-2">
+							<div id="status-led" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_#10b981]"></div>
+							<span class="text-[9px] font-mono text-stone-400 uppercase tracking-wider">Ready</span>
+						</div>
+					</div>
 
-              <!-- Shutter Flash Overlay -->
-              <div id="shutter-flash" class="absolute inset-0 bg-white opacity-0 pointer-events-none transition-opacity duration-100 z-10"></div>
+					<!-- Viewfinder Frame -->
+					<div class="p-4 bg-stone-900">
+						<div class="relative aspect-[4/3] rounded-2xl overflow-hidden bg-black shadow-inner border border-stone-950">
+							<!-- Video Element -->
+							<video id="video-stream" autoplay playsinline class="w-full h-full object-cover"></video>
 
-              <!-- Countdown Display Overlay -->
-              <div id="countdown-overlay" class="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 pointer-events-none transition-opacity z-20">
-                <span id="countdown-number" class="text-6xl font-cinzel font-bold text-gold animate-bounce">3</span>
-              </div>
+							<!-- Crosshair Overlay -->
+							<div class="absolute inset-0 border border-white/10 pointer-events-none flex items-center justify-center">
+								<div class="w-8 h-px bg-white/20"></div>
+								<div class="h-8 w-px bg-white/20"></div>
 
-              <!-- Shutter Loading Spinner -->
-              <div id="shutter-loading" class="absolute inset-0 flex flex-col items-center justify-center bg-black/80 opacity-0 pointer-events-none transition-opacity z-20">
-                <i class="fa-solid fa-spinner fa-spin text-3xl text-gold mb-2"></i>
-                <span class="text-[10px] font-cinzel tracking-widest text-stone-300 uppercase">Menyimpan Foto...</span>
-              </div>
-            </div>
-          </div>
+								<div class="absolute top-4 left-4 w-4 h-4 border-t border-l border-white/20"></div>
+								<div class="absolute top-4 right-4 w-4 h-4 border-t border-r border-white/20"></div>
+								<div class="absolute bottom-4 left-4 w-4 h-4 border-b border-l border-white/20"></div>
+								<div class="absolute bottom-4 right-4 w-4 h-4 border-b border-r border-white/20"></div>
+							</div>
 
-          <!-- Camera Controls Grid -->
-          <div class="px-6 pb-6 bg-stone-900 grid grid-cols-3 items-center gap-4">
-            <!-- Left Control: Flip & Timer -->
-            <div class="flex flex-col gap-3 justify-center items-start">
-              <button id="btn-flip" class="w-10 h-10 rounded-full bg-stone-950 hover:bg-stone-800 text-stone-300 flex items-center justify-center border border-stone-800 transition active:scale-95 shadow-md cursor-pointer" title="Balik Kamera">
-                <i class="fa-solid fa-camera-rotate text-sm"></i>
-              </button>
-              <button id="btn-timer" class="w-10 h-10 rounded-full bg-stone-950 hover:bg-stone-800 text-stone-300 flex flex-col items-center justify-center border border-stone-800 transition active:scale-95 shadow-md relative cursor-pointer" title="Timer Tunda">
-                <i class="fa-solid fa-stopwatch text-xs"></i>
-                <span id="timer-label" class="text-[8px] font-bold font-mono text-gold -mt-0.5">Off</span>
-              </button>
-              <button id="btn-mirror" class="w-10 h-10 rounded-full bg-stone-950 hover:bg-stone-800 text-stone-300 flex flex-col items-center justify-center border border-stone-800 transition active:scale-95 shadow-md relative cursor-pointer" title="Cermin Kiri/Kanan">
-                <i class="fa-solid fa-arrows-left-right text-xs"></i>
-                <span id="mirror-label" class="text-[8px] font-bold font-mono text-gold -mt-0.5">Off</span>
-              </button>
-            </div>
+							<!-- Shutter Flash Overlay -->
+							<div id="shutter-flash" class="absolute inset-0 bg-white opacity-0 pointer-events-none transition-opacity duration-100 z-10"></div>
 
-            <!-- Middle Control: Shutter Button -->
-            <div class="flex justify-center">
-              <button id="capture-btn" class="w-20 h-20 rounded-full bg-gradient-to-b from-stone-800 to-stone-950 border-4 border-stone-950 hover:from-stone-700 p-1 active:scale-95 transition shadow-2xl relative cursor-pointer" title="Ambil Foto">
-                <div class="w-full h-full rounded-full bg-gradient-to-r from-gold-light via-gold to-gold-dark border border-gold-dark flex items-center justify-center text-stone-950 shadow-inner">
-                  <i class="fa-solid fa-camera text-2xl"></i>
-                </div>
-              </button>
-            </div>
+							<!-- Countdown Display Overlay -->
+							<div id="countdown-overlay" class="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 pointer-events-none transition-opacity z-20">
+								<span id="countdown-number" class="text-6xl font-cinzel font-bold text-gold animate-bounce">3</span>
+							</div>
 
-            <!-- Right Control: Remaining Counter -->
-            <div class="flex flex-col items-end justify-center">
-              <div class="bg-black border border-stone-850 rounded px-3 py-2 text-right shadow-inner min-w-[75px]">
-                <span class="block text-[8px] uppercase tracking-wider text-stone-500 font-bold font-cinzel">SISA FOTO</span>
-                <span id="photo-counter" class="text-xl font-mono font-bold text-red-500 tracking-widest">[ 15 ]</span>
-              </div>
-            </div>
-          </div>
+							<!-- Shutter Loading Spinner -->
+							<div id="shutter-loading" class="absolute inset-0 flex flex-col items-center justify-center bg-black/80 opacity-0 pointer-events-none transition-opacity z-20">
+								<i class="fa-solid fa-spinner fa-spin text-3xl text-gold mb-2"></i>
+								<span class="text-[10px] font-cinzel tracking-widest text-stone-300 uppercase">Menyimpan Foto...</span>
+							</div>
+						</div>
+					</div>
 
-          <!-- Bottom Branding / User Session Info -->
-          <div class="px-6 py-3.5 bg-stone-950/60 border-t border-stone-800/40 flex justify-between items-center text-[10px]">
-            <span class="text-stone-400">
-              <i class="fa-solid fa-user text-[9px] mr-1 text-gold"></i>
-              Milik: <strong id="user-display" class="text-stone-200 uppercase">Tamu</strong>
-            </span>
-            <button id="btn-logout" class="text-red-400 hover:text-red-300 font-bold uppercase tracking-wider cursor-pointer">
-              Ganti Tamu
-            </button>
-          </div>
-        </div>
+					<!-- Camera Controls Grid -->
+					<div class="px-6 pb-6 bg-stone-900 grid grid-cols-3 items-center gap-4">
+						<!-- Left Control: Flip & Timer -->
+						<div class="flex flex-col gap-3 justify-center items-start">
+							<button
+								id="btn-flip"
+								class="w-10 h-10 rounded-full bg-stone-950 hover:bg-stone-800 text-stone-300 flex items-center justify-center border border-stone-800 transition active:scale-95 shadow-md cursor-pointer"
+								title="Balik Kamera"
+							>
+								<i class="fa-solid fa-camera-rotate text-sm"></i>
+							</button>
+							<button
+								id="btn-timer"
+								class="w-10 h-10 rounded-full bg-stone-950 hover:bg-stone-800 text-stone-300 flex flex-col items-center justify-center border border-stone-800 transition active:scale-95 shadow-md relative cursor-pointer"
+								title="Timer Tunda"
+							>
+								<i class="fa-solid fa-stopwatch text-xs"></i>
+								<span id="timer-label" class="text-[8px] font-bold font-mono text-gold -mt-0.5">Off</span>
+							</button>
+							<button
+								id="btn-mirror"
+								class="w-10 h-10 rounded-full bg-stone-950 hover:bg-stone-800 text-stone-300 flex flex-col items-center justify-center border border-stone-800 transition active:scale-95 shadow-md relative cursor-pointer"
+								title="Cermin Kiri/Kanan"
+							>
+								<i class="fa-solid fa-arrows-left-right text-xs"></i>
+								<span id="mirror-label" class="text-[8px] font-bold font-mono text-gold -mt-0.5">Off</span>
+							</button>
+						</div>
 
-        <!-- Section 3: Voice Greeting / Record Section -->
-        <div id="voice-record-card" class="w-full bg-stone-900 border border-stone-850 rounded-[2rem] p-6 shadow-2xl space-y-4">
-          <div class="flex items-center gap-3 border-b border-stone-800 pb-3">
-            <div class="w-8 h-8 rounded-full bg-gold/10 border border-gold/30 flex items-center justify-center text-gold text-xs">
-              <i class="fa-solid fa-microphone"></i>
-            </div>
-            <div class="text-left">
-              <h3 class="font-cinzel text-xs text-gold uppercase tracking-wider font-bold">Pesan Suara untuk Mempelai</h3>
-              <p class="text-[9px] text-stone-500 mt-0.5">Berikan ucapan suara spesial Anda yang akan tampil di undangan.</p>
-            </div>
-          </div>
+						<!-- Middle Control: Shutter Button -->
+						<div class="flex justify-center">
+							<button
+								id="capture-btn"
+								class="w-20 h-20 rounded-full bg-gradient-to-b from-stone-800 to-stone-950 border-4 border-stone-950 hover:from-stone-700 p-1 active:scale-95 transition shadow-2xl relative cursor-pointer"
+								title="Ambil Foto"
+							>
+								<div
+									class="w-full h-full rounded-full bg-gradient-to-r from-gold-light via-gold to-gold-dark border border-gold-dark flex items-center justify-center text-stone-950 shadow-inner"
+								>
+									<i class="fa-solid fa-camera text-2xl"></i>
+								</div>
+							</button>
+						</div>
 
-          <!-- State: Ready to Record -->
-          <div id="voice-state-ready" class="flex flex-col items-center justify-center py-4 space-y-3">
-            <button id="btn-record-start" class="w-14 h-14 rounded-full bg-gradient-to-r from-gold-light via-gold to-gold-dark hover:scale-105 active:scale-95 text-stone-950 flex items-center justify-center transition cursor-pointer shadow-lg">
-              <i class="fa-solid fa-microphone text-lg"></i>
-            </button>
-            <span class="text-[10px] text-stone-400 tracking-wider font-medium">Tekan untuk mulai merekam (Maks. 60 detik)</span>
-          </div>
+						<!-- Right Control: Remaining Counter -->
+						<div class="flex flex-col items-end justify-center">
+							<div class="bg-black border border-stone-850 rounded px-3 py-2 text-right shadow-inner min-w-[75px]">
+								<span class="block text-[8px] uppercase tracking-wider text-stone-500 font-bold font-cinzel">SISA FOTO</span>
+								<span id="photo-counter" class="text-xl font-mono font-bold text-red-500 tracking-widest">[ 15 ]</span>
+							</div>
+						</div>
+					</div>
 
-          <!-- State: Recording in Progress -->
-          <div id="voice-state-recording" class="hidden flex flex-col items-center justify-center py-4 space-y-4">
-            <div class="flex items-center gap-3 bg-red-950/20 border border-red-900/30 px-4 py-2 rounded-full">
-              <div class="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping"></div>
-              <span id="recording-timer" class="font-mono text-xs text-red-400 font-bold">00:00</span>
-            </div>
-            
-            <!-- Animated dancing audio waves -->
-            <div class="flex items-end justify-center gap-1 h-6">
-              <div class="w-1 bg-gold rounded-full audio-wave-bar" style="--height: 12px; animation: bounce-wave 0.5s ease-in-out infinite alternate;"></div>
-              <div class="w-1 bg-gold rounded-full audio-wave-bar" style="--height: 24px; animation: bounce-wave 0.4s ease-in-out infinite alternate 0.1s;"></div>
-              <div class="w-1 bg-gold rounded-full audio-wave-bar" style="--height: 16px; animation: bounce-wave 0.6s ease-in-out infinite alternate 0.2s;"></div>
-              <div class="w-1 bg-gold rounded-full audio-wave-bar" style="--height: 20px; animation: bounce-wave 0.3s ease-in-out infinite alternate 0.15s;"></div>
-              <div class="w-1 bg-gold rounded-full audio-wave-bar" style="--height: 8px; animation: bounce-wave 0.5s ease-in-out infinite alternate 0.05s;"></div>
-            </div>
+					<!-- Bottom Branding / User Session Info -->
+					<div class="px-6 py-3.5 bg-stone-950/60 border-t border-stone-800/40 flex justify-between items-center text-[10px]">
+						<span class="text-stone-400">
+							<i class="fa-solid fa-user text-[9px] mr-1 text-gold"></i>
+							Milik: <strong id="user-display" class="text-stone-200 uppercase">Tamu</strong>
+						</span>
+						<button id="btn-logout" class="text-red-400 hover:text-red-300 font-bold uppercase tracking-wider cursor-pointer"> Ganti Tamu </button>
+					</div>
+				</div>
 
-            <button id="btn-record-stop" class="px-5 py-2 rounded-full border border-red-500/30 hover:bg-red-950/20 text-red-400 text-[10px] font-cinzel font-bold uppercase tracking-wider transition cursor-pointer flex items-center gap-1.5 active:scale-95">
-              <i class="fa-solid fa-square text-[9px]"></i> Hentikan Rekaman
-            </button>
-          </div>
+				<!-- Section 3: Voice Greeting / Record Section -->
+				<div id="voice-record-card" class="w-full bg-stone-900 border border-stone-850 rounded-[2rem] p-6 shadow-2xl space-y-4">
+					<div class="flex items-center gap-3 border-b border-stone-800 pb-3">
+						<div class="w-8 h-8 rounded-full bg-gold/10 border border-gold/30 flex items-center justify-center text-gold text-xs">
+							<i class="fa-solid fa-microphone"></i>
+						</div>
+						<div class="text-left">
+							<h3 class="font-cinzel text-xs text-gold uppercase tracking-wider font-bold">Pesan Suara untuk Mempelai</h3>
+							<p class="text-[9px] text-stone-500 mt-0.5">Berikan ucapan suara spesial Anda yang untuk kedua Mempelai.</p>
+						</div>
+					</div>
 
-          <!-- State: Preview & Action -->
-          <div id="voice-state-preview" class="hidden flex flex-col items-center justify-center py-4 space-y-4">
-            <div class="w-full flex items-center justify-center">
-              <audio id="audio-preview" controls class="w-full max-w-[280px] bg-stone-950 border border-stone-850 rounded-lg text-stone-200 h-10 outline-none"></audio>
-            </div>
-            <div class="flex gap-3 w-full max-w-[280px]">
-              <button id="btn-voice-cancel" class="flex-1 py-2.5 font-cinzel text-[10px] uppercase tracking-wider text-stone-400 border border-stone-800 rounded-lg hover:bg-stone-850 hover:text-stone-200 transition cursor-pointer font-bold text-center">
-                Rekam Ulang
-              </button>
-              <button id="btn-voice-upload" class="flex-1 py-2.5 font-cinzel text-[10px] uppercase tracking-wider text-stone-950 bg-gradient-to-r from-gold-light via-gold to-gold-dark rounded-lg hover:opacity-90 transition cursor-pointer font-bold text-center flex items-center justify-center gap-1">
-                <i class="fa-solid fa-cloud-arrow-up"></i> Simpan Suara
-              </button>
-            </div>
-          </div>
+					<!-- State: Ready to Record -->
+					<div id="voice-state-ready" class="flex flex-col items-center justify-center py-4 space-y-3">
+						<button
+							id="btn-record-start"
+							class="w-14 h-14 rounded-full bg-gradient-to-r from-gold-light via-gold to-gold-dark hover:scale-105 active:scale-95 text-stone-950 flex items-center justify-center transition cursor-pointer shadow-lg"
+						>
+							<i class="fa-solid fa-microphone text-lg"></i>
+						</button>
+						<span class="text-[10px] text-stone-400 tracking-wider font-medium">Tekan untuk mulai merekam (Maks. 60 detik)</span>
+					</div>
 
-          <!-- State: Uploading -->
-          <div id="voice-state-uploading" class="hidden flex flex-col items-center justify-center py-6 space-y-3">
-            <i class="fa-solid fa-spinner fa-spin text-2xl text-gold animate-bounce"></i>
-            <span class="text-[10px] font-cinzel tracking-widest text-stone-400 uppercase">Mengunggah Rekaman...</span>
-          </div>
+					<!-- State: Recording in Progress -->
+					<div id="voice-state-recording" class="hidden flex flex-col items-center justify-center py-4 space-y-4">
+						<div class="flex items-center gap-3 bg-red-950/20 border border-red-900/30 px-4 py-2 rounded-full">
+							<div class="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping"></div>
+							<span id="recording-timer" class="font-mono text-xs text-red-400 font-bold">00:00</span>
+						</div>
 
-          <!-- State: Active Wish Voice Greeting -->
-          <div id="voice-state-active" class="hidden flex flex-col items-center justify-center py-4 space-y-4 text-center">
-            <div class="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-lg mx-auto">
-              <i class="fa-solid fa-circle-check"></i>
-            </div>
-            <div>
-              <p class="text-[11px] font-bold text-stone-200">Rekaman Suara Anda Aktif!</p>
-              <p class="text-[9px] text-emerald-400 mt-0.5">Pesan suara Anda akan diputar di daftar ucapan undangan.</p>
-            </div>
-            
-            <div class="w-full flex items-center justify-center">
-              <audio id="audio-active" controls class="w-full max-w-[280px] bg-stone-950 border border-stone-850 rounded-lg text-stone-200 h-10 outline-none"></audio>
-            </div>
+						<!-- Animated dancing audio waves -->
+						<div class="flex items-end justify-center gap-1 h-6">
+							<div class="w-1 bg-gold rounded-full audio-wave-bar" style="--height: 12px; animation: bounce-wave 0.5s ease-in-out infinite alternate;"></div>
+							<div class="w-1 bg-gold rounded-full audio-wave-bar" style="--height: 24px; animation: bounce-wave 0.4s ease-in-out infinite alternate 0.1s;"></div>
+							<div class="w-1 bg-gold rounded-full audio-wave-bar" style="--height: 16px; animation: bounce-wave 0.6s ease-in-out infinite alternate 0.2s;"></div>
+							<div class="w-1 bg-gold rounded-full audio-wave-bar" style="--height: 20px; animation: bounce-wave 0.3s ease-in-out infinite alternate 0.15s;"></div>
+							<div class="w-1 bg-gold rounded-full audio-wave-bar" style="--height: 8px; animation: bounce-wave 0.5s ease-in-out infinite alternate 0.05s;"></div>
+						</div>
 
-            <button id="btn-voice-delete" class="text-red-400 hover:text-red-300 hover:underline text-[9px] uppercase tracking-wider font-bold cursor-pointer transition flex items-center gap-1 active:scale-95">
-              <i class="fa-solid fa-trash-can text-[9px]"></i> Hapus & Rekam Ulang
-            </button>
-          </div>
-        </div>
+						<button
+							id="btn-record-stop"
+							class="px-5 py-2 rounded-full border border-red-500/30 hover:bg-red-950/20 text-red-400 text-[10px] font-cinzel font-bold uppercase tracking-wider transition cursor-pointer flex items-center gap-1.5 active:scale-95"
+						>
+							<i class="fa-solid fa-square text-[9px]"></i> Hentikan Rekaman
+						</button>
+					</div>
 
-        <canvas id="capture-canvas" class="hidden"></canvas>
+					<!-- State: Preview & Action -->
+					<div id="voice-state-preview" class="hidden flex flex-col items-center justify-center py-4 space-y-4">
+						<div class="w-full flex items-center justify-center">
+							<audio id="audio-preview" controls class="w-full max-w-[280px] bg-stone-950 border border-stone-850 rounded-lg text-stone-200 h-10 outline-none"></audio>
+						</div>
+						<div class="flex gap-3 w-full max-w-[280px]">
+							<button
+								id="btn-voice-cancel"
+								class="flex-1 py-2.5 font-cinzel text-[10px] uppercase tracking-wider text-stone-400 border border-stone-800 rounded-lg hover:bg-stone-850 hover:text-stone-200 transition cursor-pointer font-bold text-center"
+							>
+								Rekam Ulang
+							</button>
+							<button
+								id="btn-voice-upload"
+								class="flex-1 py-2.5 font-cinzel text-[10px] uppercase tracking-wider text-stone-950 bg-gradient-to-r from-gold-light via-gold to-gold-dark rounded-lg hover:opacity-90 transition cursor-pointer font-bold text-center flex items-center justify-center gap-1"
+							>
+								<i class="fa-solid fa-cloud-arrow-up"></i> Simpan Suara
+							</button>
+						</div>
+					</div>
 
-        <!-- Preview Modal Overlay -->
-        <div id="preview-modal" class="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex flex-col items-center justify-center opacity-0 pointer-events-none transition-all duration-300 px-4">
-          <button id="close-preview-btn" class="absolute top-6 right-6 text-stone-400 hover:text-white text-3xl transition active:scale-90 cursor-pointer p-2">
-            <i class="fa-solid fa-xmark"></i>
-          </button>
-          <div class="max-w-lg w-full flex flex-col items-center">
-            <div class="bg-[#FAF8F5] p-4 pb-16 shadow-2xl rounded border border-stone-200/50 w-full">
-              <div class="aspect-square bg-stone-950 overflow-hidden relative mb-4">
-                <img id="modal-preview-img" src="" class="w-full h-full object-contain" alt="Preview Foto" />
-              </div>
-              <p id="modal-preview-time" class="text-xs text-stone-800 font-mono tracking-widest text-center uppercase font-bold"></p>
-            </div>
-          </div>
-        </div>
+					<!-- State: Uploading -->
+					<div id="voice-state-uploading" class="hidden flex flex-col items-center justify-center py-6 space-y-3">
+						<i class="fa-solid fa-spinner fa-spin text-2xl text-gold animate-bounce"></i>
+						<span class="text-[10px] font-cinzel tracking-widest text-stone-400 uppercase">Mengunggah Rekaman...</span>
+					</div>
 
-        <!-- Polaroid Gallery Section -->
-        <div class="space-y-4">
-          <div class="flex justify-between items-center border-b border-stone-800 pb-2">
-            <h3 class="font-cinzel text-xs text-gold uppercase tracking-wider font-bold">Galeri Foto Anda</h3>
-            <div class="text-right">
-              <span id="gallery-count" class="block text-[10px] text-stone-500 font-mono">0 / 15 Foto</span>
-              <span id="delete-count" class="block text-[8px] text-stone-400 font-mono">Batas Hapus: 0 / 5</span>
-            </div>
-          </div>
+					<!-- State: Active Wish Voice Greeting -->
+					<div id="voice-state-active" class="hidden flex flex-col items-center justify-center py-4 space-y-4 text-center">
+						<div class="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-lg mx-auto">
+							<i class="fa-solid fa-circle-check"></i>
+						</div>
+						<div>
+							<p class="text-[11px] font-bold text-stone-200">Rekaman Suara Anda Aktif!</p>
+							<p class="text-[9px] text-emerald-400 mt-0.5">Pesan suara Anda akan diputar di daftar ucapan undangan.</p>
+						</div>
 
-          <div id="gallery" class="grid grid-cols-2 gap-4">
-            <!-- Polaroid frames populated by script -->
-          </div>
-        </div>
+						<div class="w-full flex items-center justify-center">
+							<audio id="audio-active" controls class="w-full max-w-[280px] bg-stone-950 border border-stone-850 rounded-lg text-stone-200 h-10 outline-none"></audio>
+						</div>
 
-      </section>
-    </main>
+						<button
+							id="btn-voice-delete"
+							class="text-red-400 hover:text-red-300 hover:underline text-[9px] uppercase tracking-wider font-bold cursor-pointer transition flex items-center gap-1 active:scale-95"
+						>
+							<i class="fa-solid fa-trash-can text-[9px]"></i> Hapus & Rekam Ulang
+						</button>
+					</div>
+				</div>
 
-    <footer class="text-center text-[9px] text-stone-600 font-cinzel mt-8 uppercase tracking-widest">
-      &copy; AW Wedding Invitation - Disposable Camera
-    </footer>
-  </div>
+				<canvas id="capture-canvas" class="hidden"></canvas>
 
-  <style>
-    .polaroid-frame {
-      background: #FAF8F5; /* Royal Cream */
-      padding: 8px 8px 24px 8px;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
-      transform: rotate(var(--rotation, 0deg));
-      transition: transform 0.3s ease;
-    }
-    .polaroid-frame:hover {
-      transform: scale(1.05) rotate(0deg) !important;
-      z-index: 10;
-    }
-    @keyframes bounce-wave {
-      0% {
-        height: 4px;
-      }
-      100% {
-        height: var(--height, 20px);
-      }
-    }
-    .audio-wave-bar {
-      transition: height 0.1s ease;
-    }
-  </style>
+				<!-- Preview Modal Overlay -->
+				<div
+					id="preview-modal"
+					class="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex flex-col items-center justify-center opacity-0 pointer-events-none transition-all duration-300 px-4"
+				>
+					<button id="close-preview-btn" class="absolute top-6 right-6 text-stone-400 hover:text-white text-3xl transition active:scale-90 cursor-pointer p-2">
+						<i class="fa-solid fa-xmark"></i>
+					</button>
+					<div class="max-w-lg w-full flex flex-col items-center">
+						<div class="bg-[#FAF8F5] p-4 pb-16 shadow-2xl rounded border border-stone-200/50 w-full">
+							<div class="aspect-square bg-stone-950 overflow-hidden relative mb-4">
+								<img id="modal-preview-img" src="" class="w-full h-full object-contain" alt="Preview Foto" />
+							</div>
+							<p id="modal-preview-time" class="text-xs text-stone-800 font-mono tracking-widest text-center uppercase font-bold"></p>
+						</div>
+					</div>
+				</div>
 
-  <script is:inline>
-    const nameSection = document.getElementById('name-section');
-    const cameraSection = document.getElementById('camera-section');
-    const guestForm = document.getElementById('guest-name-form');
-    const guestInput = document.getElementById('guest-name');
-    
-    const video = document.getElementById('video-stream');
-    const canvas = document.getElementById('capture-canvas');
-    const captureBtn = document.getElementById('capture-btn');
-    const flipBtn = document.getElementById('btn-flip');
-    const timerBtn = document.getElementById('btn-timer');
-    const mirrorBtn = document.getElementById('btn-mirror');
-    
-    const timerLabel = document.getElementById('timer-label');
-    const mirrorLabel = document.getElementById('mirror-label');
-    const ledIndicator = document.getElementById('status-led');
-    const photoCounter = document.getElementById('photo-counter');
-    const galleryCountLabel = document.getElementById('gallery-count');
-    const userDisplay = document.getElementById('user-display');
-    const logoutBtn = document.getElementById('btn-logout');
-    
-    const flashOverlay = document.getElementById('shutter-flash');
-    const countdownOverlay = document.getElementById('countdown-overlay');
-    const countdownNumber = document.getElementById('countdown-number');
-    const loadingOverlay = document.getElementById('shutter-loading');
-    const gallery = document.getElementById('gallery');
-    
-    const guestKey = 'cameraGuest';
-    let currentStream = null;
-    let facingMode = 'environment'; // Default: rear camera
-    let timerValue = 0; // Timer setting: 0, 3, or 5 seconds
-    let activeGuest = '';
-    let isMirrored = false; // Active preview mirroring state
-    let currentPhotoCount = 0; // Track photo count dynamically
+				<!-- Polaroid Gallery Section -->
+				<div class="space-y-4">
+					<div class="flex justify-between items-center border-b border-stone-800 pb-2">
+						<h3 class="font-cinzel text-xs text-gold uppercase tracking-wider font-bold">Galeri Foto Anda</h3>
+						<div class="text-right">
+							<span id="gallery-count" class="block text-[10px] text-stone-500 font-mono">0 / 15 Foto</span>
+							<span id="delete-count" class="block text-[8px] text-stone-400 font-mono">Batas Hapus: 0 / 5</span>
+						</div>
+					</div>
 
-    // Parse dynamic settings from attributes
-    const photoLimit = parseInt(cameraSection.getAttribute('data-limit')) || 15;
-    const deleteLimit = parseInt(cameraSection.getAttribute('data-delete-limit')) || 5;
-    const allowDeletePhoto = cameraSection.getAttribute('data-allow-delete') === 'true';
-    const allowChangeGuest = cameraSection.getAttribute('data-allow-change') === 'true';
-    if (!allowChangeGuest && logoutBtn) {
-      logoutBtn.style.display = 'none';
-    }
+					<div id="gallery" class="grid grid-cols-2 gap-4">
+						<!-- Polaroid frames populated by script -->
+					</div>
+				</div>
+			</section>
+		</main>
 
-    const storedGuest = localStorage.getItem(guestKey);
-    if (storedGuest) {
-      activeGuest = storedGuest;
-      initCamera(activeGuest);
-    } else {
-      nameSection.style.display = 'block';
-    }
+		<footer class="text-center text-[9px] text-stone-600 font-cinzel mt-8 uppercase tracking-widest">&copy; AW Wedding Invitation - Disposable Camera</footer>
+	</div>
 
-    // Name submit logic
-    guestForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const val = guestInput.value.trim();
-      if (!val) return;
-      
-      // Generate a unique suffix for the typed name
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-      let suffix = '';
-      for (let i = 0; i < 4; i++) {
-        suffix += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      const uniqueId = `${val}#${suffix}`;
-      
-      localStorage.setItem(guestKey, uniqueId);
-      activeGuest = uniqueId;
-      nameSection.style.display = 'none';
-      initCamera(activeGuest);
-    });
+	<style>
+		.polaroid-frame {
+			background: #faf8f5; /* Royal Cream */
+			padding: 8px 8px 24px 8px;
+			box-shadow:
+				0 10px 25px -5px rgba(0, 0, 0, 0.4),
+				0 8px 10px -6px rgba(0, 0, 0, 0.4);
+			transform: rotate(var(--rotation, 0deg));
+			transition: transform 0.3s ease;
+		}
+		.polaroid-frame:hover {
+			transform: scale(1.05) rotate(0deg) !important;
+			z-index: 10;
+		}
+		@keyframes bounce-wave {
+			0% {
+				height: 4px;
+			}
+			100% {
+				height: var(--height, 20px);
+			}
+		}
+		.audio-wave-bar {
+			transition: height 0.1s ease;
+		}
+	</style>
 
-    // Logout / reset guest logic
-    logoutBtn.addEventListener('click', () => {
-      if (currentStream) {
-        currentStream.getTracks().forEach(t => t.stop());
-      }
-      localStorage.removeItem(guestKey);
-      window.location.reload();
-    });
+	<script is:inline>
+		const nameSection = document.getElementById("name-section");
+		const cameraSection = document.getElementById("camera-section");
+		const guestForm = document.getElementById("guest-name-form");
+		const guestInput = document.getElementById("guest-name");
 
-    // Timer cycling logic (Off -> 3s -> 5s -> Off)
-    timerBtn.addEventListener('click', () => {
-      if (timerValue === 0) {
-        timerValue = 3;
-        timerLabel.innerText = '3s';
-        timerLabel.className = 'text-[8px] font-bold font-mono text-emerald-400 -mt-0.5';
-      } else if (timerValue === 3) {
-        timerValue = 5;
-        timerLabel.innerText = '5s';
-        timerLabel.className = 'text-[8px] font-bold font-mono text-emerald-400 -mt-0.5';
-      } else {
-        timerValue = 0;
-        timerLabel.innerText = 'Off';
-        timerLabel.className = 'text-[8px] font-bold font-mono text-gold -mt-0.5';
-      }
-    });
+		const video = document.getElementById("video-stream");
+		const canvas = document.getElementById("capture-canvas");
+		const captureBtn = document.getElementById("capture-btn");
+		const flipBtn = document.getElementById("btn-flip");
+		const timerBtn = document.getElementById("btn-timer");
+		const mirrorBtn = document.getElementById("btn-mirror");
 
-    // Mirror button click listener
-    mirrorBtn.addEventListener('click', () => {
-      isMirrored = !isMirrored;
-      updateMirroring();
-    });
+		const timerLabel = document.getElementById("timer-label");
+		const mirrorLabel = document.getElementById("mirror-label");
+		const ledIndicator = document.getElementById("status-led");
+		const photoCounter = document.getElementById("photo-counter");
+		const galleryCountLabel = document.getElementById("gallery-count");
+		const userDisplay = document.getElementById("user-display");
+		const logoutBtn = document.getElementById("btn-logout");
 
-    function updateMirroring() {
-      if (isMirrored) {
-        video.style.transform = 'scaleX(-1)';
-        mirrorLabel.innerText = 'On';
-        mirrorLabel.className = 'text-[8px] font-bold font-mono text-emerald-400 -mt-0.5';
-      } else {
-        video.style.transform = 'scaleX(1)';
-        mirrorLabel.innerText = 'Off';
-        mirrorLabel.className = 'text-[8px] font-bold font-mono text-gold -mt-0.5';
-      }
-    }
+		const flashOverlay = document.getElementById("shutter-flash");
+		const countdownOverlay = document.getElementById("countdown-overlay");
+		const countdownNumber = document.getElementById("countdown-number");
+		const loadingOverlay = document.getElementById("shutter-loading");
+		const gallery = document.getElementById("gallery");
 
-    // Flip camera logic
-    flipBtn.addEventListener('click', () => {
-      facingMode = facingMode === 'environment' ? 'user' : 'environment';
-      startCameraStream(facingMode);
-    });
+		const guestKey = "cameraGuest";
+		let currentStream = null;
+		let facingMode = "environment"; // Default: rear camera
+		let timerValue = 0; // Timer setting: 0, 3, or 5 seconds
+		let activeGuest = "";
+		let isMirrored = false; // Active preview mirroring state
+		let currentPhotoCount = 0; // Track photo count dynamically
 
-    // Start stream
-    async function startCameraStream(mode) {
-      if (currentStream) {
-        currentStream.getTracks().forEach(t => t.stop());
-      }
+		// Parse dynamic settings from attributes
+		const photoLimit = parseInt(cameraSection.getAttribute("data-limit")) || 15;
+		const deleteLimit = parseInt(cameraSection.getAttribute("data-delete-limit")) || 5;
+		const allowDeletePhoto = cameraSection.getAttribute("data-allow-delete") === "true";
+		const allowChangeGuest = cameraSection.getAttribute("data-allow-change") === "true";
+		if (!allowChangeGuest && logoutBtn) {
+			logoutBtn.style.display = "none";
+		}
 
-      // Default mirroring on front camera, off on rear camera
-      isMirrored = (mode === 'user');
-      updateMirroring();
+		const storedGuest = localStorage.getItem(guestKey);
+		if (storedGuest) {
+			activeGuest = storedGuest;
+			initCamera(activeGuest);
+		} else {
+			nameSection.style.display = "block";
+		}
 
-      try {
-        const constraints = {
-          video: {
-            facingMode: { ideal: mode },
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          },
-          audio: false
-        };
-        currentStream = await navigator.mediaDevices.getUserMedia(constraints);
-        video.srcObject = currentStream;
-      } catch (err) {
-        console.warn('Ideal constraints failed, fallback to default video device:', err);
-        try {
-          currentStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-          video.srcObject = currentStream;
-        } catch (e) {
-          alert('Gagal mengakses kamera. Mohon berikan izin di pengaturan browser Anda.');
-        }
-      }
-    }
+		// Name submit logic
+		guestForm.addEventListener("submit", (e) => {
+			e.preventDefault();
+			const val = guestInput.value.trim();
+			if (!val) return;
 
-    // Initialize disposable camera
-    async function initCamera(guest) {
-      userDisplay.innerText = guest.split('#')[0];
-      cameraSection.style.display = 'block';
-      
-      // Load current gallery
-      await loadGallery(guest);
-      
-      // Start camera feed
-      await startCameraStream(facingMode);
+			// Generate a unique suffix for the typed name
+			const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+			let suffix = "";
+			for (let i = 0; i < 4; i++) {
+				suffix += chars.charAt(Math.floor(Math.random() * chars.length));
+			}
+			const uniqueId = `${val}#${suffix}`;
 
-      // Load guest voice greeting
-      await loadGuestVoice(guest);
+			localStorage.setItem(guestKey, uniqueId);
+			activeGuest = uniqueId;
+			nameSection.style.display = "none";
+			initCamera(activeGuest);
+		});
 
-      // Shutter click listener
-      captureBtn.addEventListener('click', () => {
-        if (captureBtn.disabled) return;
+		// Logout / reset guest logic
+		logoutBtn.addEventListener("click", () => {
+			if (currentStream) {
+				currentStream.getTracks().forEach((t) => t.stop());
+			}
+			localStorage.removeItem(guestKey);
+			window.location.reload();
+		});
 
-        // Instant client-side limit check
-        if (currentPhotoCount >= photoLimit) {
-          alert(`Anda telah mencapai batas maksimal ${photoLimit} foto!`);
-          return;
-        }
-        
-        if (timerValue > 0) {
-          runCountdown(timerValue, () => capturePhoto(guest));
-        } else {
-          capturePhoto(guest);
-        }
-      });
-    }
+		// Timer cycling logic (Off -> 3s -> 5s -> Off)
+		timerBtn.addEventListener("click", () => {
+			if (timerValue === 0) {
+				timerValue = 3;
+				timerLabel.innerText = "3s";
+				timerLabel.className = "text-[8px] font-bold font-mono text-emerald-400 -mt-0.5";
+			} else if (timerValue === 3) {
+				timerValue = 5;
+				timerLabel.innerText = "5s";
+				timerLabel.className = "text-[8px] font-bold font-mono text-emerald-400 -mt-0.5";
+			} else {
+				timerValue = 0;
+				timerLabel.innerText = "Off";
+				timerLabel.className = "text-[8px] font-bold font-mono text-gold -mt-0.5";
+			}
+		});
 
-    // Countdown function
-    function runCountdown(seconds, callback) {
-      captureBtn.disabled = true;
-      countdownOverlay.style.opacity = '1';
-      let remaining = seconds;
-      countdownNumber.innerText = remaining.toString();
+		// Mirror button click listener
+		mirrorBtn.addEventListener("click", () => {
+			isMirrored = !isMirrored;
+			updateMirroring();
+		});
 
-      const interval = setInterval(() => {
-        remaining--;
-        if (remaining <= 0) {
-          clearInterval(interval);
-          countdownOverlay.style.opacity = '0';
-          captureBtn.disabled = false;
-          callback();
-        } else {
-          countdownNumber.innerText = remaining.toString();
-        }
-      }, 1000);
-    }
+		function updateMirroring() {
+			if (isMirrored) {
+				video.style.transform = "scaleX(-1)";
+				mirrorLabel.innerText = "On";
+				mirrorLabel.className = "text-[8px] font-bold font-mono text-emerald-400 -mt-0.5";
+			} else {
+				video.style.transform = "scaleX(1)";
+				mirrorLabel.innerText = "Off";
+				mirrorLabel.className = "text-[8px] font-bold font-mono text-gold -mt-0.5";
+			}
+		}
 
-    // Helper to render a temporary uploading polaroid card in gallery
-    function renderTempPolaroid(localUrl, tempId) {
-      const idx = gallery.children.length;
-      const rot = ((idx * 7) % 11) - 5; 
-      
-      const col = document.createElement('div');
-      col.id = tempId;
-      col.className = 'polaroid-frame border border-stone-200 rounded opacity-75';
-      col.style.setProperty('--rotation', `${rot}deg`);
+		// Flip camera logic
+		flipBtn.addEventListener("click", () => {
+			facingMode = facingMode === "environment" ? "user" : "environment";
+			startCameraStream(facingMode);
+		});
 
-      col.innerHTML = `
+		// Start stream
+		async function startCameraStream(mode) {
+			if (currentStream) {
+				currentStream.getTracks().forEach((t) => t.stop());
+			}
+
+			// Default mirroring on front camera, off on rear camera
+			isMirrored = mode === "user";
+			updateMirroring();
+
+			try {
+				const constraints = {
+					video: {
+						facingMode: { ideal: mode },
+						width: { ideal: 1280 },
+						height: { ideal: 720 },
+					},
+					audio: false,
+				};
+				currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+				video.srcObject = currentStream;
+			} catch (err) {
+				console.warn("Ideal constraints failed, fallback to default video device:", err);
+				try {
+					currentStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+					video.srcObject = currentStream;
+				} catch (e) {
+					alert("Gagal mengakses kamera. Mohon berikan izin di pengaturan browser Anda.");
+				}
+			}
+		}
+
+		// Initialize disposable camera
+		async function initCamera(guest) {
+			userDisplay.innerText = guest.split("#")[0];
+			cameraSection.style.display = "block";
+
+			// Load current gallery
+			await loadGallery(guest);
+
+			// Start camera feed
+			await startCameraStream(facingMode);
+
+			// Load guest voice greeting
+			await loadGuestVoice(guest);
+
+			// Shutter click listener
+			captureBtn.addEventListener("click", () => {
+				if (captureBtn.disabled) return;
+
+				// Instant client-side limit check
+				if (currentPhotoCount >= photoLimit) {
+					alert(`Anda telah mencapai batas maksimal ${photoLimit} foto!`);
+					return;
+				}
+
+				if (timerValue > 0) {
+					runCountdown(timerValue, () => capturePhoto(guest));
+				} else {
+					capturePhoto(guest);
+				}
+			});
+		}
+
+		// Countdown function
+		function runCountdown(seconds, callback) {
+			captureBtn.disabled = true;
+			countdownOverlay.style.opacity = "1";
+			let remaining = seconds;
+			countdownNumber.innerText = remaining.toString();
+
+			const interval = setInterval(() => {
+				remaining--;
+				if (remaining <= 0) {
+					clearInterval(interval);
+					countdownOverlay.style.opacity = "0";
+					captureBtn.disabled = false;
+					callback();
+				} else {
+					countdownNumber.innerText = remaining.toString();
+				}
+			}, 1000);
+		}
+
+		// Helper to render a temporary uploading polaroid card in gallery
+		function renderTempPolaroid(localUrl, tempId) {
+			const idx = gallery.children.length;
+			const rot = ((idx * 7) % 11) - 5;
+
+			const col = document.createElement("div");
+			col.id = tempId;
+			col.className = "polaroid-frame border border-stone-200 rounded opacity-75";
+			col.style.setProperty("--rotation", `${rot}deg`);
+
+			col.innerHTML = `
         <div class="aspect-square w-full bg-stone-850 overflow-hidden relative mb-2 flex items-center justify-center">
           <img src="${localUrl}" class="w-full h-full object-cover blur-[1px]" alt="Foto Polaroid" />
           <div class="absolute inset-0 flex flex-col items-center justify-center bg-black/40">
@@ -540,164 +585,170 @@ try {
           MENGUNGGAH...
         </div>
       `;
-      // Prepend so new photos appear first in gallery
-      gallery.insertBefore(col, gallery.firstChild);
-    }
+			// Prepend so new photos appear first in gallery
+			gallery.insertBefore(col, gallery.firstChild);
+		}
 
-    // Helper to remove temporary polaroid card
-    function removeTempPolaroid(tempId) {
-      const el = document.getElementById(tempId);
-      if (el) el.remove();
-    }
+		// Helper to remove temporary polaroid card
+		function removeTempPolaroid(tempId) {
+			const el = document.getElementById(tempId);
+			if (el) el.remove();
+		}
 
-    // Background upload function
-    async function uploadPhotoInBackground(blob, guest, tempId, localUrl) {
-      const form = new FormData();
-      form.append('guest', guest);
-      form.append('photos', blob, `disposable_${Date.now()}.jpg`);
+		// Background upload function
+		async function uploadPhotoInBackground(blob, guest, tempId, localUrl) {
+			const form = new FormData();
+			form.append("guest", guest);
+			form.append("photos", blob, `disposable_${Date.now()}.jpg`);
 
-      try {
-        const uploadRes = await fetch('/api/camera', {
-          method: 'POST',
-          body: form,
-        });
+			try {
+				const uploadRes = await fetch("/api/camera", {
+					method: "POST",
+					body: form,
+				});
 
-        if (uploadRes.ok) {
-          // Re-load gallery from database to get final public Supabase URLs and details
-          await loadGallery(guest);
-        } else {
-          const err = await uploadRes.json();
-          alert(err.error || 'Gagal menyimpan foto ke server.');
-          removeTempPolaroid(tempId);
-          currentPhotoCount = Math.max(0, currentPhotoCount - 1);
-          updateStats();
-        }
-      } catch (e) {
-        alert('Gagal terhubung ke server. Foto tidak tersimpan.');
-        removeTempPolaroid(tempId);
-        currentPhotoCount = Math.max(0, currentPhotoCount - 1);
-        updateStats();
-      } finally {
-        URL.revokeObjectURL(localUrl);
-      }
-    }
+				if (uploadRes.ok) {
+					// Re-load gallery from database to get final public Supabase URLs and details
+					await loadGallery(guest);
+				} else {
+					const err = await uploadRes.json();
+					alert(err.error || "Gagal menyimpan foto ke server.");
+					removeTempPolaroid(tempId);
+					currentPhotoCount = Math.max(0, currentPhotoCount - 1);
+					updateStats();
+				}
+			} catch (e) {
+				alert("Gagal terhubung ke server. Foto tidak tersimpan.");
+				removeTempPolaroid(tempId);
+				currentPhotoCount = Math.max(0, currentPhotoCount - 1);
+				updateStats();
+			} finally {
+				URL.revokeObjectURL(localUrl);
+			}
+		}
 
-    // Client-side stats display updater
-    function updateStats() {
-      const sisa = Math.max(0, photoLimit - currentPhotoCount);
-      photoCounter.innerText = `[ ${sisa.toString().padStart(2, '0')} ]`;
-      galleryCountLabel.innerText = `${currentPhotoCount} / ${photoLimit} Foto`;
+		// Client-side stats display updater
+		function updateStats() {
+			const sisa = Math.max(0, photoLimit - currentPhotoCount);
+			photoCounter.innerText = `[ ${sisa.toString().padStart(2, "0")} ]`;
+			galleryCountLabel.innerText = `${currentPhotoCount} / ${photoLimit} Foto`;
 
-      if (currentPhotoCount >= photoLimit) {
-        captureBtn.disabled = true;
-        ledIndicator.className = 'w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_#f59e0b]';
-      } else {
-        captureBtn.disabled = false;
-        resetReadyLed();
-      }
-    }
+			if (currentPhotoCount >= photoLimit) {
+				captureBtn.disabled = true;
+				ledIndicator.className = "w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_#f59e0b]";
+			} else {
+				captureBtn.disabled = false;
+				resetReadyLed();
+			}
+		}
 
-    // Shutter capture and upload
-    async function capturePhoto(guest) {
-      // 1. Shutter Flash FX
-      flashOverlay.style.opacity = '1';
-      setTimeout(() => {
-        flashOverlay.style.opacity = '0';
-      }, 150);
+		// Shutter capture and upload
+		async function capturePhoto(guest) {
+			// 1. Shutter Flash FX
+			flashOverlay.style.opacity = "1";
+			setTimeout(() => {
+				flashOverlay.style.opacity = "0";
+			}, 150);
 
-      // Disable button briefly to prevent double clicks
-      captureBtn.disabled = true;
-      ledIndicator.className = 'w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444] animate-none';
+			// Disable button briefly to prevent double clicks
+			captureBtn.disabled = true;
+			ledIndicator.className = "w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444] animate-none";
 
-      // 2. Increment client counter immediately
-      currentPhotoCount++;
-      updateStats();
+			// 2. Increment client counter immediately
+			currentPhotoCount++;
+			updateStats();
 
-      // 3. Draw image to canvas
-      const ctx = canvas.getContext('2d');
-      canvas.width = video.videoWidth || 640;
-      canvas.height = video.videoHeight || 480;
+			// 3. Draw image to canvas
+			const ctx = canvas.getContext("2d");
+			canvas.width = video.videoWidth || 640;
+			canvas.height = video.videoHeight || 480;
 
-      if (isMirrored) {
-        ctx.translate(canvas.width, 0);
-        ctx.scale(-1, 1);
-      }
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
+			if (isMirrored) {
+				ctx.translate(canvas.width, 0);
+				ctx.scale(-1, 1);
+			}
+			ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+			ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
 
-      // 4. Convert to blob and process
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          alert('Format data foto rusak.');
-          currentPhotoCount = Math.max(0, currentPhotoCount - 1);
-          updateStats();
-          resetReadyLed();
-          return;
-        }
+			// 4. Convert to blob and process
+			canvas.toBlob(
+				(blob) => {
+					if (!blob) {
+						alert("Format data foto rusak.");
+						currentPhotoCount = Math.max(0, currentPhotoCount - 1);
+						updateStats();
+						resetReadyLed();
+						return;
+					}
 
-        // Generate temporary ID and local object URL for instant rendering
-        const tempId = 'temp_' + Date.now();
-        const localUrl = URL.createObjectURL(blob);
+					// Generate temporary ID and local object URL for instant rendering
+					const tempId = "temp_" + Date.now();
+					const localUrl = URL.createObjectURL(blob);
 
-        // Render instant preview in gallery
-        renderTempPolaroid(localUrl, tempId);
+					// Render instant preview in gallery
+					renderTempPolaroid(localUrl, tempId);
 
-        // Enable capture again immediately for seamless UX!
-        setTimeout(() => {
-          if (currentPhotoCount < photoLimit) {
-            captureBtn.disabled = false;
-            resetReadyLed();
-          }
-        }, 800); // 800ms throttle to prevent button mash but keep it fast
+					// Enable capture again immediately for seamless UX!
+					setTimeout(() => {
+						if (currentPhotoCount < photoLimit) {
+							captureBtn.disabled = false;
+							resetReadyLed();
+						}
+					}, 800); // 800ms throttle to prevent button mash but keep it fast
 
-        // Kick off background upload
-        uploadPhotoInBackground(blob, guest, tempId, localUrl);
-      }, 'image/jpeg', 0.85);
-    }
+					// Kick off background upload
+					uploadPhotoInBackground(blob, guest, tempId, localUrl);
+				},
+				"image/jpeg",
+				0.85,
+			);
+		}
 
-    function resetReadyLed() {
-      captureBtn.disabled = false;
-      ledIndicator.className = 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_#10b981]';
-    }
+		function resetReadyLed() {
+			captureBtn.disabled = false;
+			ledIndicator.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_#10b981]";
+		}
 
-    // Load gallery files
-    async function loadGallery(guest) {
-      try {
-        const res = await fetch(`/api/camera?guest=${encodeURIComponent(guest)}`);
-        if (!res.ok) return;
-        const { photos, deletionCount } = await res.json();
-        
-        // Update stats
-        currentPhotoCount = photos.length || 0;
-        updateStats();
+		// Load gallery files
+		async function loadGallery(guest) {
+			try {
+				const res = await fetch(`/api/camera?guest=${encodeURIComponent(guest)}`);
+				if (!res.ok) return;
+				const { photos, deletionCount } = await res.json();
 
-        const deleteCountLabel = document.getElementById('delete-count');
-        if (deleteCountLabel) {
-          if (allowDeletePhoto) {
-            deleteCountLabel.style.display = 'block';
-            deleteCountLabel.innerText = `Batas Hapus: ${deletionCount} / ${deleteLimit}`;
-          } else {
-            deleteCountLabel.style.display = 'none';
-          }
-        }
+				// Update stats
+				currentPhotoCount = photos.length || 0;
+				updateStats();
 
-        // Render photoPolaroids
-        gallery.innerHTML = '';
-        photos.forEach((p, idx) => {
-          // Generate a deterministic random rotation for organic alignment look
-          const rot = ((idx * 7) % 11) - 5; 
-          
-          const createdDate = new Date(p.created_at);
-          const timeStr = createdDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+				const deleteCountLabel = document.getElementById("delete-count");
+				if (deleteCountLabel) {
+					if (allowDeletePhoto) {
+						deleteCountLabel.style.display = "block";
+						deleteCountLabel.innerText = `Batas Hapus: ${deletionCount} / ${deleteLimit}`;
+					} else {
+						deleteCountLabel.style.display = "none";
+					}
+				}
 
-          const col = document.createElement('div');
-          col.className = 'polaroid-frame border border-stone-200 rounded';
-          col.style.setProperty('--rotation', `${rot}deg`);
+				// Render photoPolaroids
+				gallery.innerHTML = "";
+				photos.forEach((p, idx) => {
+					// Generate a deterministic random rotation for organic alignment look
+					const rot = ((idx * 7) % 11) - 5;
 
-          col.innerHTML = `
+					const createdDate = new Date(p.created_at);
+					const timeStr = createdDate.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) + " WIB";
+
+					const col = document.createElement("div");
+					col.className = "polaroid-frame border border-stone-200 rounded";
+					col.style.setProperty("--rotation", `${rot}deg`);
+
+					col.innerHTML = `
             <div class="polaroid-image-wrapper aspect-square w-full bg-stone-850 overflow-hidden relative mb-2 cursor-pointer" data-url="${p.url}" data-time="${timeStr}">
               <img src="${p.url}" class="w-full h-full object-cover" alt="Foto Polaroid" />
-              ${allowDeletePhoto ? `
+              ${
+					allowDeletePhoto
+						? `
               <button 
                 class="user-photo-delete-btn absolute top-2 right-2 w-7 h-7 bg-red-950/80 hover:bg-red-650 border border-red-900/40 text-red-400 hover:text-white rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md"
                 data-photo-id="${p.id}"
@@ -705,295 +756,296 @@ try {
               >
                 <i class="fa-solid fa-trash-can text-[10px]"></i>
               </button>
-              ` : ''}
+              `
+						: ""
+				}
             </div>
             <div class="text-[9px] text-stone-800 font-mono tracking-widest text-center truncate uppercase">
               ${timeStr}
             </div>
           `;
-          gallery.appendChild(col);
-        });
-      } catch (err) {
-        console.error('Gallery loading error:', err);
-      }
-    }
+					gallery.appendChild(col);
+				});
+			} catch (err) {
+				console.error("Gallery loading error:", err);
+			}
+		}
 
-    // User photo delete click event delegation listener
-    gallery.addEventListener('click', async (e) => {
-      if (!allowDeletePhoto) return;
-      const btn = e.target.closest('.user-photo-delete-btn');
-      if (!btn) return;
+		// User photo delete click event delegation listener
+		gallery.addEventListener("click", async (e) => {
+			if (!allowDeletePhoto) return;
+			const btn = e.target.closest(".user-photo-delete-btn");
+			if (!btn) return;
 
-      const photoId = btn.getAttribute('data-photo-id');
-      if (!photoId) return;
+			const photoId = btn.getAttribute("data-photo-id");
+			if (!photoId) return;
 
-      if (!confirm('Apakah Anda yakin ingin menghapus foto ini secara permanen?')) {
-        return;
-      }
+			if (!confirm("Apakah Anda yakin ingin menghapus foto ini secara permanen?")) {
+				return;
+			}
 
-      const originalHtml = btn.innerHTML;
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-[10px]"></i>';
+			const originalHtml = btn.innerHTML;
+			btn.disabled = true;
+			btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-[10px]"></i>';
 
-      try {
-        const res = await fetch(`/api/camera?id=${photoId}&guest=${encodeURIComponent(activeGuest)}`, {
-          method: 'DELETE'
-        });
+			try {
+				const res = await fetch(`/api/camera?id=${photoId}&guest=${encodeURIComponent(activeGuest)}`, {
+					method: "DELETE",
+				});
 
-        if (res.ok) {
-          await loadGallery(activeGuest);
-          alert('Foto berhasil dihapus.');
-        } else {
-          const err = await res.json();
-          alert(err.error || 'Gagal menghapus foto.');
-          btn.disabled = false;
-          btn.innerHTML = originalHtml;
-        }
-      } catch (err) {
-        console.error(err);
-        alert('Kesalahan koneksi saat menghapus foto.');
-        btn.disabled = false;
-        btn.innerHTML = originalHtml;
-      }
-    });
+				if (res.ok) {
+					await loadGallery(activeGuest);
+					alert("Foto berhasil dihapus.");
+				} else {
+					const err = await res.json();
+					alert(err.error || "Gagal menghapus foto.");
+					btn.disabled = false;
+					btn.innerHTML = originalHtml;
+				}
+			} catch (err) {
+				console.error(err);
+				alert("Kesalahan koneksi saat menghapus foto.");
+				btn.disabled = false;
+				btn.innerHTML = originalHtml;
+			}
+		});
 
-    // Preview modal elements and event handlers
-    const previewModal = document.getElementById('preview-modal');
-    const modalImg = document.getElementById('modal-preview-img');
-    const modalTime = document.getElementById('modal-preview-time');
-    const closePreviewBtn = document.getElementById('close-preview-btn');
+		// Preview modal elements and event handlers
+		const previewModal = document.getElementById("preview-modal");
+		const modalImg = document.getElementById("modal-preview-img");
+		const modalTime = document.getElementById("modal-preview-time");
+		const closePreviewBtn = document.getElementById("close-preview-btn");
 
-    // Click wrapper to preview image
-    gallery.addEventListener('click', (e) => {
-      // Exclude delete button click
-      if (e.target.closest('.user-photo-delete-btn')) {
-        return;
-      }
+		// Click wrapper to preview image
+		gallery.addEventListener("click", (e) => {
+			// Exclude delete button click
+			if (e.target.closest(".user-photo-delete-btn")) {
+				return;
+			}
 
-      const wrapper = e.target.closest('.polaroid-image-wrapper');
-      if (!wrapper) return;
+			const wrapper = e.target.closest(".polaroid-image-wrapper");
+			if (!wrapper) return;
 
-      const url = wrapper.getAttribute('data-url');
-      const time = wrapper.getAttribute('data-time');
+			const url = wrapper.getAttribute("data-url");
+			const time = wrapper.getAttribute("data-time");
 
-      if (url && previewModal && modalImg && modalTime) {
-        modalImg.src = url;
-        modalTime.innerText = time || '';
-        previewModal.classList.remove('opacity-0', 'pointer-events-none');
-      }
-    });
+			if (url && previewModal && modalImg && modalTime) {
+				modalImg.src = url;
+				modalTime.innerText = time || "";
+				previewModal.classList.remove("opacity-0", "pointer-events-none");
+			}
+		});
 
-    // Close preview button listener
-    closePreviewBtn?.addEventListener('click', () => {
-      if (previewModal) {
-        previewModal.classList.add('opacity-0', 'pointer-events-none');
-      }
-    });
+		// Close preview button listener
+		closePreviewBtn?.addEventListener("click", () => {
+			if (previewModal) {
+				previewModal.classList.add("opacity-0", "pointer-events-none");
+			}
+		});
 
-    // Close preview on background overlay click
-    previewModal?.addEventListener('click', (e) => {
-      if (e.target === previewModal) {
-        previewModal.classList.add('opacity-0', 'pointer-events-none');
-      }
-    });
+		// Close preview on background overlay click
+		previewModal?.addEventListener("click", (e) => {
+			if (e.target === previewModal) {
+				previewModal.classList.add("opacity-0", "pointer-events-none");
+			}
+		});
 
-    // --- Voice Recording Subsystem ---
-    const voiceCard = document.getElementById('voice-record-card');
-    const stateReady = document.getElementById('voice-state-ready');
-    const stateRecording = document.getElementById('voice-state-recording');
-    const statePreview = document.getElementById('voice-state-preview');
-    const stateUploading = document.getElementById('voice-state-uploading');
-    const stateActive = document.getElementById('voice-state-active');
+		// --- Voice Recording Subsystem ---
+		const voiceCard = document.getElementById("voice-record-card");
+		const stateReady = document.getElementById("voice-state-ready");
+		const stateRecording = document.getElementById("voice-state-recording");
+		const statePreview = document.getElementById("voice-state-preview");
+		const stateUploading = document.getElementById("voice-state-uploading");
+		const stateActive = document.getElementById("voice-state-active");
 
-    const btnRecordStart = document.getElementById('btn-record-start');
-    const btnRecordStop = document.getElementById('btn-record-stop');
-    const btnVoiceCancel = document.getElementById('btn-voice-cancel');
-    const btnVoiceUpload = document.getElementById('btn-voice-upload');
-    const btnVoiceDelete = document.getElementById('btn-voice-delete');
+		const btnRecordStart = document.getElementById("btn-record-start");
+		const btnRecordStop = document.getElementById("btn-record-stop");
+		const btnVoiceCancel = document.getElementById("btn-voice-cancel");
+		const btnVoiceUpload = document.getElementById("btn-voice-upload");
+		const btnVoiceDelete = document.getElementById("btn-voice-delete");
 
-    const recordingTimer = document.getElementById('recording-timer');
-    const audioPreview = document.getElementById('audio-preview');
-    const audioActive = document.getElementById('audio-active');
+		const recordingTimer = document.getElementById("recording-timer");
+		const audioPreview = document.getElementById("audio-preview");
+		const audioActive = document.getElementById("audio-active");
 
-    let mediaRecorder = null;
-    let audioChunks = [];
-    let recordTimerInterval = null;
-    let recordStartTime = 0;
-    let recordedBlob = null;
-    let audioUrl = null;
+		let mediaRecorder = null;
+		let audioChunks = [];
+		let recordTimerInterval = null;
+		let recordStartTime = 0;
+		let recordedBlob = null;
+		let audioUrl = null;
 
-    async function loadGuestVoice(guest) {
-      try {
-        const res = await fetch(`/api/voice?guest=${encodeURIComponent(guest)}`);
-        if (!res.ok) return;
-        const { voice } = await res.json();
-        
-        showVoiceState(voice ? 'active' : 'ready');
-        if (voice) {
-          audioActive.src = voice.url;
-        }
-      } catch (err) {
-        console.error('Error loading guest voice:', err);
-      }
-    }
+		async function loadGuestVoice(guest) {
+			try {
+				const res = await fetch(`/api/voice?guest=${encodeURIComponent(guest)}`);
+				if (!res.ok) return;
+				const { voice } = await res.json();
 
-    function showVoiceState(state) {
-      stateReady.classList.add('hidden');
-      stateRecording.classList.add('hidden');
-      statePreview.classList.add('hidden');
-      stateUploading.classList.add('hidden');
-      stateActive.classList.add('hidden');
+				showVoiceState(voice ? "active" : "ready");
+				if (voice) {
+					audioActive.src = voice.url;
+				}
+			} catch (err) {
+				console.error("Error loading guest voice:", err);
+			}
+		}
 
-      if (state === 'ready') stateReady.classList.remove('hidden');
-      else if (state === 'recording') stateRecording.classList.remove('hidden');
-      else if (state === 'preview') statePreview.classList.remove('hidden');
-      else if (state === 'uploading') stateUploading.classList.remove('hidden');
-      else if (state === 'active') stateActive.classList.remove('hidden');
-    }
+		function showVoiceState(state) {
+			stateReady.classList.add("hidden");
+			stateRecording.classList.add("hidden");
+			statePreview.classList.add("hidden");
+			stateUploading.classList.add("hidden");
+			stateActive.classList.add("hidden");
 
-    btnRecordStart.addEventListener('click', async () => {
-      audioChunks = [];
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        
-        // Find supported mimetype
-        let mimeType = '';
-        if (MediaRecorder.isTypeSupported('audio/webm')) {
-          mimeType = 'audio/webm';
-        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
-          mimeType = 'audio/mp4';
-        } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
-          mimeType = 'audio/ogg';
-        } else if (MediaRecorder.isTypeSupported('audio/wav')) {
-          mimeType = 'audio/wav';
-        }
+			if (state === "ready") stateReady.classList.remove("hidden");
+			else if (state === "recording") stateRecording.classList.remove("hidden");
+			else if (state === "preview") statePreview.classList.remove("hidden");
+			else if (state === "uploading") stateUploading.classList.remove("hidden");
+			else if (state === "active") stateActive.classList.remove("hidden");
+		}
 
-        const options = mimeType ? { mimeType } : {};
-        mediaRecorder = new MediaRecorder(stream, options);
-        
-        mediaRecorder.ondataavailable = (event) => {
-          if (event.data.size > 0) {
-            audioChunks.push(event.data);
-          }
-        };
+		btnRecordStart.addEventListener("click", async () => {
+			audioChunks = [];
+			try {
+				const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-        mediaRecorder.onstop = () => {
-          recordedBlob = new Blob(audioChunks, { type: mimeType || 'audio/webm' });
-          if (audioUrl) {
-            URL.revokeObjectURL(audioUrl);
-          }
-          audioUrl = URL.createObjectURL(recordedBlob);
-          audioPreview.src = audioUrl;
-          
-          // Stop stream tracks to release microphone icon
-          stream.getTracks().forEach(track => track.stop());
-          
-          showVoiceState('preview');
-        };
+				// Find supported mimetype
+				let mimeType = "";
+				if (MediaRecorder.isTypeSupported("audio/webm")) {
+					mimeType = "audio/webm";
+				} else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+					mimeType = "audio/mp4";
+				} else if (MediaRecorder.isTypeSupported("audio/ogg")) {
+					mimeType = "audio/ogg";
+				} else if (MediaRecorder.isTypeSupported("audio/wav")) {
+					mimeType = "audio/wav";
+				}
 
-        // Start recording
-        mediaRecorder.start();
-        recordStartTime = Date.now();
-        showVoiceState('recording');
-        
-        // Update timer every second
-        recordingTimer.innerText = '00:00';
-        recordTimerInterval = setInterval(() => {
-          const elapsed = Math.floor((Date.now() - recordStartTime) / 1000);
-          const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
-          const secs = String(elapsed % 60).padStart(2, '0');
-          recordingTimer.innerText = `${mins}:${secs}`;
-          
-          // Enforce 60 seconds limit
-          if (elapsed >= 60) {
-            stopRecording();
-          }
-        }, 1000);
+				const options = mimeType ? { mimeType } : {};
+				mediaRecorder = new MediaRecorder(stream, options);
 
-      } catch (err) {
-        alert('Gagal mengakses mikrofon. Silakan izinkan akses mikrofon di browser Anda untuk merekam pesan suara.');
-        console.error('Microphone access error:', err);
-      }
-    });
+				mediaRecorder.ondataavailable = (event) => {
+					if (event.data.size > 0) {
+						audioChunks.push(event.data);
+					}
+				};
 
-    function stopRecording() {
-      if (recordTimerInterval) {
-        clearInterval(recordTimerInterval);
-      }
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        mediaRecorder.stop();
-      }
-    }
+				mediaRecorder.onstop = () => {
+					recordedBlob = new Blob(audioChunks, { type: mimeType || "audio/webm" });
+					if (audioUrl) {
+						URL.revokeObjectURL(audioUrl);
+					}
+					audioUrl = URL.createObjectURL(recordedBlob);
+					audioPreview.src = audioUrl;
 
-    btnRecordStop.addEventListener('click', () => {
-      stopRecording();
-    });
+					// Stop stream tracks to release microphone icon
+					stream.getTracks().forEach((track) => track.stop());
 
-    btnVoiceCancel.addEventListener('click', () => {
-      if (audioUrl) {
-        URL.revokeObjectURL(audioUrl);
-        audioUrl = null;
-      }
-      recordedBlob = null;
-      showVoiceState('ready');
-    });
+					showVoiceState("preview");
+				};
 
-    btnVoiceUpload.addEventListener('click', async () => {
-      if (!recordedBlob || !activeGuest) return;
+				// Start recording
+				mediaRecorder.start();
+				recordStartTime = Date.now();
+				showVoiceState("recording");
 
-      showVoiceState('uploading');
-      
-      const fileExt = (recordedBlob.type.split(';')[0] || 'audio/webm').split('/')[1] || 'webm';
-      const file = new File([recordedBlob], `voice_${Date.now()}.${fileExt}`, { type: recordedBlob.type });
+				// Update timer every second
+				recordingTimer.innerText = "00:00";
+				recordTimerInterval = setInterval(() => {
+					const elapsed = Math.floor((Date.now() - recordStartTime) / 1000);
+					const mins = String(Math.floor(elapsed / 60)).padStart(2, "0");
+					const secs = String(elapsed % 60).padStart(2, "0");
+					recordingTimer.innerText = `${mins}:${secs}`;
 
-      const form = new FormData();
-      form.append('guest', activeGuest);
-      form.append('audio', file);
+					// Enforce 60 seconds limit
+					if (elapsed >= 60) {
+						stopRecording();
+					}
+				}, 1000);
+			} catch (err) {
+				alert("Gagal mengakses mikrofon. Silakan izinkan akses mikrofon di browser Anda untuk merekam pesan suara.");
+				console.error("Microphone access error:", err);
+			}
+		});
 
-      try {
-        const res = await fetch('/api/voice', {
-          method: 'POST',
-          body: form
-        });
+		function stopRecording() {
+			if (recordTimerInterval) {
+				clearInterval(recordTimerInterval);
+			}
+			if (mediaRecorder && mediaRecorder.state !== "inactive") {
+				mediaRecorder.stop();
+			}
+		}
 
-        if (res.ok) {
-          const data = await res.json();
-          audioActive.src = data.voice.url;
-          showVoiceState('active');
-        } else {
-          const err = await res.json();
-          alert(err.error || 'Gagal mengunggah pesan suara.');
-          showVoiceState('preview');
-        }
-      } catch (err) {
-        alert('Terjadi kesalahan koneksi saat mengunggah.');
-        showVoiceState('preview');
-      }
-    });
+		btnRecordStop.addEventListener("click", () => {
+			stopRecording();
+		});
 
-    btnVoiceDelete.addEventListener('click', async () => {
-      if (!activeGuest) return;
-      if (!confirm('Apakah Anda yakin ingin menghapus rekaman suara ini?')) return;
+		btnVoiceCancel.addEventListener("click", () => {
+			if (audioUrl) {
+				URL.revokeObjectURL(audioUrl);
+				audioUrl = null;
+			}
+			recordedBlob = null;
+			showVoiceState("ready");
+		});
 
-      showVoiceState('uploading');
+		btnVoiceUpload.addEventListener("click", async () => {
+			if (!recordedBlob || !activeGuest) return;
 
-      try {
-        const res = await fetch(`/api/voice?guest=${encodeURIComponent(activeGuest)}`, {
-          method: 'DELETE'
-        });
+			showVoiceState("uploading");
 
-        if (res.ok) {
-          audioActive.src = '';
-          showVoiceState('ready');
-        } else {
-          const err = await res.json();
-          alert(err.error || 'Gagal menghapus rekaman suara.');
-          showVoiceState('active');
-        }
-      } catch (err) {
-        alert('Terjadi kesalahan koneksi saat menghapus.');
-        showVoiceState('active');
-      }
-    });
-  </script>
+			const fileExt = (recordedBlob.type.split(";")[0] || "audio/webm").split("/")[1] || "webm";
+			const file = new File([recordedBlob], `voice_${Date.now()}.${fileExt}`, { type: recordedBlob.type });
+
+			const form = new FormData();
+			form.append("guest", activeGuest);
+			form.append("audio", file);
+
+			try {
+				const res = await fetch("/api/voice", {
+					method: "POST",
+					body: form,
+				});
+
+				if (res.ok) {
+					const data = await res.json();
+					audioActive.src = data.voice.url;
+					showVoiceState("active");
+				} else {
+					const err = await res.json();
+					alert(err.error || "Gagal mengunggah pesan suara.");
+					showVoiceState("preview");
+				}
+			} catch (err) {
+				alert("Terjadi kesalahan koneksi saat mengunggah.");
+				showVoiceState("preview");
+			}
+		});
+
+		btnVoiceDelete.addEventListener("click", async () => {
+			if (!activeGuest) return;
+			if (!confirm("Apakah Anda yakin ingin menghapus rekaman suara ini?")) return;
+
+			showVoiceState("uploading");
+
+			try {
+				const res = await fetch(`/api/voice?guest=${encodeURIComponent(activeGuest)}`, {
+					method: "DELETE",
+				});
+
+				if (res.ok) {
+					audioActive.src = "";
+					showVoiceState("ready");
+				} else {
+					const err = await res.json();
+					alert(err.error || "Gagal menghapus rekaman suara.");
+					showVoiceState("active");
+				}
+			} catch (err) {
+				alert("Terjadi kesalahan koneksi saat menghapus.");
+				showVoiceState("active");
+			}
+		});
+	</script>
 </Layout>

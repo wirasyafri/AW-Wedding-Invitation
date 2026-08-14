@@ -34,6 +34,8 @@ This file serves as workspace instructions for Antigravity (AI coding assistant)
 * `DELETE /api/camera?id=ID&guest=NAME`: Guest/admin deletion with safety verification checks.
 * `POST /api/upload`: Authenticated admin asset upload.
 * `POST /api/save-settings`: Authenticated admin settings updates.
+* `GET /api/admin-stats?adminPass=PASS`: Fetches storage bucket metrics, database row counts, active URLs list, deletions history, wishes RSVP counts, and settings.
+* `POST /api/admin-storage-action`: Password-secured endpoint to delete orphan files from storage (`action: 'delete-file'`) or wipe audit logs (`action: 'clear-deletions-log'`).
 
 ---
 
@@ -44,3 +46,11 @@ This file serves as workspace instructions for Antigravity (AI coding assistant)
 * **Canvas Animations**:
   * `falling-leaves` overlay canvas on `index.astro` (falling gold leaves).
   * `cover-pets-canvas` overlay on `Cover.astro` (winter white hamsters roaming at the bottom, sugar gliders with pink paws/ears and tail tips gliding across the card). The loop is stopped using `coverActive = false` when Cover is dismissed.
+
+---
+
+## 6. Moderator Panel & Storage Analysis Dashboard
+* **Penyimpanan & Kuota Tab**: An admin dashboard view inside `/admin` to monitor Supabase resources. Displays resource progress bars (vs 1GB storage limit and 5k DB rows reference) and an RSVP segmented bar chart (Attending/Green, Not Attending/Red, Tentative/Yellow).
+* **Orphan File Detection**: Automatically flags files in storage that have no active records in the database (`camera_photos`, `guest_voices`) or settings (`groom_photo`, etc.) as `[Orphan]`. Large files are flagged with `[>3MB]`.
+* **Inline Previews & Cleanup**: Provides inline audio playback trigger cards for voice files, links to view assets, and delete buttons to wipe orphan files permanently from storage.
+* **Safety Audit Logs**: Renders safety activity log records of guest deleted photos (`camera_deletions`) with an option to wipe the logs safely.

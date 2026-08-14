@@ -1,6 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { supabase } from '../lib/supabase.server';
+import { supabase, getBucketStorageStats } from '../lib/supabase.server';
 
 // Session variables
 let authenticated = false;
@@ -9,6 +9,11 @@ let cameraPhotos: any[] = [];
 let errorMessage = '';
 let passwordVal = '';
 let guestVoicesMap = new Map<string, string>();
+
+let cameraDeletionsCount = 0;
+let cameraDeletions: any[] = [];
+let cameraStorageStats = { totalSize: 0, fileCount: 0, fileList: [] as any[] };
+let photosStorageStats = { totalSize: 0, fileCount: 0, fileList: [] as any[] };
 
 const adminPassword = import.meta.env.ADMIN_PASSWORD;
 
@@ -247,6 +252,30 @@ if (Astro.request.method === 'POST') {
             } catch (err) {
                 console.error("Gagal memuat camera_photos:", err);
             }
+
+            // Fetch camera deletions
+            try {
+                const { data: dbDeletions, count } = await supabase
+                    .from('camera_deletions')
+                    .select('*', { count: 'exact' })
+                    .order('deleted_at', { ascending: false });
+                if (count !== null) {
+                    cameraDeletionsCount = count;
+                }
+                if (dbDeletions) {
+                    cameraDeletions = dbDeletions;
+                }
+            } catch (err) {
+                console.error("Gagal memuat camera_deletions:", err);
+            }
+
+            // Fetch storage stats
+            try {
+                cameraStorageStats = await getBucketStorageStats('disposable-camera');
+                photosStorageStats = await getBucketStorageStats('photos');
+            } catch (err) {
+                console.error("Gagal memuat info storage:", err);
+            }
         } else {
             errorMessage = 'Password yang Anda masukkan salah!';
         }
@@ -263,6 +292,25 @@ const totalGuests = wishes.reduce((sum, w) => {
     const num = parseInt(w.guests) || 1;
     return sum + num;
 }, 0);
+
+// Storage and Database Summary Statistics
+const totalStorageSize = cameraStorageStats.totalSize + photosStorageStats.totalSize;
+const totalStorageFiles = cameraStorageStats.fileCount + photosStorageStats.fileCount;
+const storageLimit = 1024 * 1024 * 1024; // 1 GB in bytes
+const storagePercentage = Math.min((totalStorageSize / storageLimit) * 100, 100);
+const totalDbRows = totalWishes + guestVoicesMap.size + cameraPhotos.length + cameraDeletionsCount;
+
+// RSVP Breakdown statistics
+const rsvpWishes = wishes.filter(w => w.status);
+const rsvpCount = rsvpWishes.length;
+const rsvpAttending = rsvpWishes.filter(w => w.status === 'Hadir').length;
+const rsvpNotAttending = rsvpWishes.filter(w => w.status === 'Tidak Hadir').length;
+const rsvpTentative = rsvpWishes.filter(w => w.status !== 'Hadir' && w.status !== 'Tidak Hadir').length;
+
+const pctAttending = rsvpCount > 0 ? (rsvpAttending / rsvpCount) * 100 : 0;
+const pctNotAttending = rsvpCount > 0 ? (rsvpNotAttending / rsvpCount) * 100 : 0;
+const pctTentative = rsvpCount > 0 ? (rsvpTentative / rsvpCount) * 100 : 0;
+const rsvpAverageGuests = rsvpAttending > 0 ? (totalGuests / rsvpAttending) : 0;
 
 // Group camera photos by guest name
 const photosByGuest = cameraPhotos.reduce((groups: Record<string, any[]>, photo) => {
@@ -303,6 +351,27 @@ function parseUtcIsoToLocal(utcIso: string) {
         return '';
     }
 }
+
+// Helper to format bytes to human readable format
+function formatBytes(bytes: number, decimals = 2) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+
+// Active database and settings URLs for orphan detection
+const activeDbUrls = new Set([
+    ...cameraPhotos.map(p => p.url),
+    ...Array.from(guestVoicesMap.values())
+]);
+const activeSettingsUrls = new Set([
+    activeSettings.groom_photo,
+    activeSettings.bride_photo,
+    activeSettings.hero_bg
+]);
 ---
 
 <Layout title="Moderator Panel - Wira & Ayu">
@@ -369,6 +438,9 @@ function parseUtcIsoToLocal(utcIso: string) {
                     </button>
                     <button id="tab-camera" class="px-5 py-2.5 border-b-2 border-transparent text-stone-400 font-cinzel font-bold tracking-wider uppercase hover:text-stone-200 cursor-pointer transition">
                         Disposable Camera
+                    </button>
+                    <button id="tab-usage" class="px-5 py-2.5 border-b-2 border-transparent text-stone-400 font-cinzel font-bold tracking-wider uppercase hover:text-stone-200 cursor-pointer transition">
+                        Penyimpanan & Kuota
                     </button>
                 </div>
 
@@ -857,6 +929,319 @@ function parseUtcIsoToLocal(utcIso: string) {
                     </div>
                 </div>
 
+                {/* TAB 4: STORAGE & USAGE DASHBOARD */}
+                <div id="view-usage" class="hidden space-y-8">
+                    <div class="bg-stone-900 border border-stone-800 rounded-xl p-6 shadow-2xl text-left">
+                        <div class="border-b border-stone-800 pb-4 mb-6 flex justify-between items-center flex-wrap gap-4">
+                            <div>
+                                <h2 class="font-cinzel text-xs text-gold uppercase tracking-wider">Supabase Storage & Database Usage</h2>
+                                <p class="text-stone-400 text-[11px] mt-1">Pantau kapasitas penyimpanan berkas dan statistik baris basis data Supabase.</p>
+                            </div>
+                            <button id="refresh-usage-btn" class="px-4 py-2 bg-stone-950 hover:bg-stone-800 border border-stone-800 hover:border-gold font-cinzel text-[10px] text-stone-300 hover:text-gold rounded-lg uppercase tracking-wider transition cursor-pointer flex items-center gap-1.5 shadow-sm">
+                                <i class="fa-solid fa-arrows-rotate"></i> Perbarui Statistik
+                            </button>
+                        </div>
+
+                        {/* Top row cards */}
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                            <div class="bg-stone-950/60 border border-stone-800/80 rounded-xl p-5 shadow-inner">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-stone-400 font-cinzel text-[10px] uppercase tracking-wider">Total Penyimpanan</span>
+                                    <i class="fa-solid fa-hard-drive text-gold text-xs"></i>
+                                </div>
+                                <div class="flex items-baseline gap-2 mb-3">
+                                    <span id="stat-total-storage" class="text-2xl font-bold text-gold font-mono">{formatBytes(totalStorageSize)}</span>
+                                    <span class="text-[10px] text-stone-500 font-mono">/ 1 GB Limit</span>
+                                </div>
+                                <div class="w-full bg-stone-900 rounded-full h-2 overflow-hidden border border-stone-800">
+                                    <div id="bar-total-storage" class="bg-gradient-to-r from-gold-light to-gold h-full rounded-full transition-all duration-500" style={{ width: `${storagePercentage}%` }}></div>
+                                </div>
+                                <div class="flex justify-between text-[9px] text-stone-500 font-mono mt-1.5">
+                                    <span id="txt-storage-files">{totalStorageFiles} file terunggah</span>
+                                    <span id="txt-storage-percentage">{storagePercentage.toFixed(3)}% digunakan</span>
+                                </div>
+                            </div>
+
+                            <div class="bg-stone-950/60 border border-stone-800/80 rounded-xl p-5 shadow-inner">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-stone-400 font-cinzel text-[10px] uppercase tracking-wider">Basis Data (Baris)</span>
+                                    <i class="fa-solid fa-database text-gold text-xs"></i>
+                                </div>
+                                <div class="flex items-baseline gap-2 mb-3">
+                                    <span id="stat-total-rows" class="text-2xl font-bold text-emerald-400 font-mono">{totalDbRows}</span>
+                                    <span class="text-[10px] text-stone-500">baris tersimpan</span>
+                                </div>
+                                <div class="w-full bg-stone-900 rounded-full h-2 overflow-hidden border border-stone-800">
+                                    <div id="bar-total-rows" class="bg-emerald-500 h-full rounded-full transition-all duration-500" style={{ width: `${Math.min((totalDbRows / 5000) * 100, 100)}%` }}></div>
+                                </div>
+                                <div class="flex justify-between text-[9px] text-stone-500 font-mono mt-1.5">
+                                    <span>Skema: Public</span>
+                                    <span>Batas Gratis: 500 MB</span>
+                                </div>
+                            </div>
+
+                            <div class="bg-stone-950/60 border border-stone-800/80 rounded-xl p-5 shadow-inner">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-stone-400 font-cinzel text-[10px] uppercase tracking-wider">Batas Kamera Disposable</span>
+                                    <i class="fa-solid fa-camera text-gold text-xs"></i>
+                                </div>
+                                <div class="flex items-baseline gap-2 mb-3">
+                                    <span class="text-2xl font-bold text-gold-light font-mono">{cameraPhotos.length}</span>
+                                    <span class="text-[10px] text-stone-500">foto dari tamu</span>
+                                </div>
+                                <div class="w-full bg-stone-900 rounded-full h-2 overflow-hidden border border-stone-800">
+                                    <div class="bg-gold-light h-full rounded-full transition-all duration-500" style={{ width: `${Math.min((cameraPhotos.length / 100) * 100, 100)}%` }}></div>
+                                </div>
+                                <div class="flex justify-between text-[9px] text-stone-500 mt-1.5 font-mono">
+                                    <span>Batas: {activeSettings.camera_photo_limit} foto / tamu</span>
+                                    <span>Hapus: {activeSettings.camera_delete_limit} / tamu</span>
+                                </div>
+                            </div>
+
+                            <div class="bg-stone-950/60 border border-stone-800/80 rounded-xl p-5 shadow-inner">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-stone-400 font-cinzel text-[10px] uppercase tracking-wider">RSVP & Kehadiran</span>
+                                    <i class="fa-solid fa-clipboard-user text-gold text-xs"></i>
+                                </div>
+                                <div class="flex items-baseline gap-2 mb-3">
+                                    <span id="stat-rsvp-guests" class="text-2xl font-bold text-gold-light font-mono">{totalGuests}</span>
+                                    <span class="text-[10px] text-stone-500 font-sans">tamu hadir</span>
+                                </div>
+                                <div class="w-full bg-stone-900 rounded-full h-2 overflow-hidden border border-stone-800 flex">
+                                    <div id="bar-rsvp-attending" class="bg-emerald-500 h-full transition-all duration-500" style={{ width: `${pctAttending}%` }} title={`Hadir: ${pctAttending.toFixed(1)}%`}></div>
+                                    <div id="bar-rsvp-notattending" class="bg-red-500 h-full transition-all duration-500" style={{ width: `${pctNotAttending}%` }} title={`Tidak Hadir: ${pctNotAttending.toFixed(1)}%`}></div>
+                                    <div id="bar-rsvp-tentative" class="bg-amber-500 h-full transition-all duration-500" style={{ width: `${pctTentative}%` }} title={`Ragu-ragu: ${pctTentative.toFixed(1)}%`}></div>
+                                </div>
+                                <div class="flex justify-between text-[9px] text-stone-500 mt-1.5 font-mono">
+                                    <span id="txt-rsvp-average">Rata-rata: {rsvpAverageGuests.toFixed(1)} pax</span>
+                                    <span id="txt-rsvp-total">{rsvpCount} respon</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Storage details & Database counts */}
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                            {/* Storage Buckets details */}
+                            <div class="border border-stone-800/60 bg-stone-950/40 rounded-xl p-5 space-y-4">
+                                <div class="flex items-center gap-2 border-b border-stone-800 pb-2">
+                                    <div class="w-2 h-2 rounded-full bg-gold"></div>
+                                    <h3 class="font-cinzel text-xs text-stone-200 font-bold tracking-wide">Rincian Storage Bucket</h3>
+                                </div>
+                                <div class="space-y-4 text-xs">
+                                    <div class="flex items-center justify-between border-b border-stone-900 pb-2">
+                                        <div>
+                                            <span class="text-stone-300 font-mono block">disposable-camera</span>
+                                            <span class="text-[10px] text-stone-500">Foto kamera & rekaman suara tamu</span>
+                                        </div>
+                                        <div class="text-right">
+                                            <span id="bucket-camera-size" class="text-stone-200 font-bold font-mono block">{formatBytes(cameraStorageStats.totalSize)}</span>
+                                            <span id="bucket-camera-count" class="text-[10px] text-stone-500 font-mono">{cameraStorageStats.fileCount} file</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between border-b border-stone-900 pb-2">
+                                        <div>
+                                            <span class="text-stone-300 font-mono block">photos</span>
+                                            <span class="text-[10px] text-stone-500">Aset foto mempelai & latar belakang</span>
+                                        </div>
+                                        <div class="text-right">
+                                            <span id="bucket-photos-size" class="text-stone-200 font-bold font-mono block">{formatBytes(photosStorageStats.totalSize)}</span>
+                                            <span id="bucket-photos-count" class="text-[10px] text-stone-500 font-mono">{photosStorageStats.fileCount} file</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex justify-between text-[10px] text-stone-500 pt-1">
+                                        <span>Status bucket: Publik (Public Read)</span>
+                                        <span>Kebijakan RLS: Proteksi Tulis & Hapus Aktif</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Database Table details */}
+                            <div class="border border-stone-800/60 bg-stone-950/40 rounded-xl p-5 space-y-4">
+                                <div class="flex items-center gap-2 border-b border-stone-800 pb-2">
+                                    <div class="w-2 h-2 rounded-full bg-gold"></div>
+                                    <h3 class="font-cinzel text-xs text-stone-200 font-bold tracking-wide">Rincian Baris Tabel Basis Data</h3>
+                                </div>
+                                <div class="overflow-x-auto text-xs">
+                                    <table class="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr class="border-b border-stone-850 text-stone-500 font-mono text-[9px] uppercase tracking-wider">
+                                                <th class="py-2">Nama Tabel</th>
+                                                <th class="py-2">Deskripsi</th>
+                                                <th class="py-2 text-right">Jumlah Baris</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-stone-900 font-mono text-stone-300">
+                                            <tr>
+                                                <td class="py-2 text-stone-400">wishes</td>
+                                                <td class="py-2 text-[10px] text-stone-500 font-sans">Ucapan & RSVP tamu</td>
+                                                <td id="tbl-row-wishes" class="py-2 text-right text-stone-200">{totalWishes}</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="py-2 text-stone-400">guest_voices</td>
+                                                <td class="py-2 text-[10px] text-stone-500 font-sans">Rekaman suara ucapan tamu</td>
+                                                <td id="tbl-row-voices" class="py-2 text-right text-stone-200">{guestVoicesMap.size}</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="py-2 text-stone-400">camera_photos</td>
+                                                <td class="py-2 text-[10px] text-stone-500 font-sans">Daftar foto kamera disposable</td>
+                                                <td id="tbl-row-photos" class="py-2 text-right text-stone-200">{cameraPhotos.length}</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="py-2 text-stone-400">camera_deletions</td>
+                                                <td class="py-2 text-[10px] text-stone-500 font-sans">Log penghapusan foto tamu</td>
+                                                <td id="tbl-row-deletions" class="py-2 text-right text-stone-200">{cameraDeletionsCount}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* File lists section */}
+                        <div class="border border-stone-800/60 bg-stone-950/20 rounded-xl p-5 space-y-4">
+                            <div class="flex items-center justify-between border-b border-stone-800 pb-2">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-2 h-2 rounded-full bg-gold"></div>
+                                    <h3 class="font-cinzel text-xs text-stone-200 font-bold tracking-wide">Daftar Berkas Penyimpanan (Storage)</h3>
+                                </div>
+                                <span id="lbl-total-files-count" class="text-[10px] text-stone-500 font-mono">{totalStorageFiles} Berkas Terdeteksi</span>
+                            </div>
+
+                            <div class="max-h-96 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-stone-800">
+                                <table class="w-full text-left border-collapse text-xs">
+                                    <thead>
+                                        <tr class="border-b border-stone-850 text-stone-500 font-mono text-[9px] uppercase tracking-wider sticky top-0 bg-stone-900/90 backdrop-blur z-10">
+                                            <th class="py-2.5 px-2">Bucket</th>
+                                            <th class="py-2.5 px-2">Path / Nama Berkas</th>
+                                            <th class="py-2.5 px-2 text-right">Ukuran</th>
+                                            <th class="py-2.5 px-2 text-center">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="files-list-body" class="divide-y divide-stone-900 text-stone-300 font-mono">
+                                        {[
+                                            ...cameraStorageStats.fileList.map(f => ({ ...f, bucket: 'disposable-camera' })),
+                                            ...photosStorageStats.fileList.map(f => ({ ...f, bucket: 'photos' }))
+                                        ].sort((a,b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()).map(file => {
+                                            const publicUrl = supabase.storage.from(file.bucket).getPublicUrl(file.name).data.publicUrl;
+                                            
+                                            // Determine if file is orphan
+                                            let isOrphan = false;
+                                            if (file.bucket === 'disposable-camera') {
+                                                isOrphan = !activeDbUrls.has(publicUrl);
+                                            } else if (file.bucket === 'photos') {
+                                                isOrphan = !activeSettingsUrls.has(publicUrl) && !activeSettingsUrls.has('/' + file.name) && !activeSettingsUrls.has(file.name);
+                                            }
+
+                                            const isLarge = file.size > 3 * 1024 * 1024; // >3MB
+                                            const isAudio = file.name.endsWith('.mp3') || file.name.endsWith('.wav') || file.name.includes('/voices/');
+                                            
+                                            return (
+                                                <tr class="hover:bg-stone-900/40 transition" data-file-row-bucket={file.bucket} data-file-row-name={file.name}>
+                                                    <td class="py-2 px-2 text-gold/80 text-[10px]">{file.bucket}</td>
+                                                    <td class="py-2 px-2 font-sans text-stone-200" title={file.name}>
+                                                        <div class="flex flex-wrap items-center gap-1.5">
+                                                            <span class="truncate max-w-[200px] sm:max-w-xs">{file.name}</span>
+                                                            {isOrphan && (
+                                                                <span class="px-1.5 py-0.5 bg-red-950/80 text-red-400 border border-red-900/40 text-[8px] font-bold uppercase rounded font-mono select-none" title="Berkas ini tidak terhubung dengan ucapan atau pengaturan undangan. Aman untuk dihapus.">Orphan</span>
+                                                            )}
+                                                            {isLarge && (
+                                                                <span class="px-1.5 py-0.5 bg-amber-950/80 text-amber-400 border border-amber-900/40 text-[8px] font-bold uppercase rounded font-mono select-none" title="Berkas berukuran besar (> 3MB) yang memakan kuota penyimpanan.">Besar</span>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td class="py-2 px-2 text-right text-stone-300">{formatBytes(file.size)}</td>
+                                                    <td class="py-2 px-2 text-center">
+                                                        <div class="flex items-center justify-center gap-1.5">
+                                                            {isAudio && (
+                                                                <button 
+                                                                    class="admin-voice-play-btn w-6 h-6 rounded bg-stone-950 hover:bg-gold/20 text-stone-400 hover:text-gold border border-stone-850 hover:border-gold/30 flex items-center justify-center transition cursor-pointer active:scale-90"
+                                                                    data-voice-url={publicUrl}
+                                                                    title="Putar Rekaman Suara"
+                                                                >
+                                                                    <i class="fa-solid fa-play text-[8px] translate-x-px"></i>
+                                                                </button>
+                                                            )}
+                                                            
+                                                            <a 
+                                                                href={publicUrl} 
+                                                                target="_blank" 
+                                                                rel="noopener noreferrer" 
+                                                                class="inline-flex items-center justify-center w-6 h-6 rounded bg-stone-950 hover:bg-gold/20 text-stone-400 hover:text-gold border border-stone-850 hover:border-gold/30 transition cursor-pointer active:scale-95"
+                                                                title="Lihat Berkas di Tab Baru"
+                                                            >
+                                                                <i class="fa-solid fa-up-right-from-square text-[9px]"></i>
+                                                            </a>
+
+                                                            {isOrphan && (
+                                                                <button 
+                                                                    class="admin-file-delete-btn w-6 h-6 rounded bg-red-950/45 hover:bg-red-900/80 text-red-400 hover:text-white border border-red-900/40 hover:border-red-650 flex items-center justify-center transition cursor-pointer active:scale-90"
+                                                                    data-file-bucket={file.bucket}
+                                                                    data-file-path={file.name}
+                                                                    title="Hapus Berkas dari Storage secara Permanen"
+                                                                >
+                                                                    <i class="fa-solid fa-trash-can text-[9px]"></i>
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                        {totalStorageFiles === 0 && (
+                                            <tr id="files-list-empty">
+                                                <td colspan="4" class="py-8 text-center text-stone-500 font-cinzel">Tidak ada berkas yang tersimpan di storage.</td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* Safety Activity Logs Section */}
+                        <div class="border border-stone-800/60 bg-stone-950/20 rounded-xl p-5 space-y-4 mt-8">
+                            <div class="flex items-center justify-between border-b border-stone-800 pb-2">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-2 h-2 rounded-full bg-red-500"></div>
+                                    <h3 class="font-cinzel text-xs text-stone-200 font-bold tracking-wide">Audit Log Penghapusan Kamera (Safety Logs)</h3>
+                                </div>
+                                <button id="clear-logs-btn" class="px-3 py-1.5 bg-red-950/20 hover:bg-red-900/80 border border-red-900/40 hover:border-red-650 font-cinzel text-[9px] text-red-400 hover:text-white rounded transition cursor-pointer flex items-center gap-1">
+                                    <i class="fa-solid fa-trash-can"></i> Bersihkan Log
+                                </button>
+                            </div>
+
+                            <div class="max-h-72 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-stone-800">
+                                <table class="w-full text-left border-collapse text-xs">
+                                    <thead>
+                                        <tr class="border-b border-stone-850 text-stone-500 font-mono text-[9px] uppercase tracking-wider sticky top-0 bg-stone-900/90 backdrop-blur z-10">
+                                            <th class="py-2 px-2">Tanggal / Waktu</th>
+                                            <th class="py-2 px-2">Nama Tamu (Guest ID)</th>
+                                            <th class="py-2 px-2">URL Foto Dihapus</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="logs-list-body" class="divide-y divide-stone-900 text-stone-300 font-mono">
+                                        {cameraDeletions.map(log => (
+                                            <tr class="hover:bg-stone-900/40 transition">
+                                                <td class="py-2 px-2 text-[10px] text-stone-400">{new Date(log.deleted_at).toLocaleString('id-ID')}</td>
+                                                <td class="py-2 px-2 text-stone-200 font-sans">{log.guest_id.split('#')[0]} {log.guest_id.includes('#') && <span class="text-[9px] text-stone-500 font-mono">#{log.guest_id.split('#')[1]}</span>}</td>
+                                                <td class="py-2 px-2 truncate max-w-sm font-sans text-stone-400" title={log.photo_url}>
+                                                    <a href={log.photo_url} target="_blank" rel="noopener noreferrer" class="hover:text-gold transition flex items-center gap-1.5">
+                                                        <i class="fa-solid fa-up-right-from-square text-[8px]"></i> {log.photo_url.split('/').pop() || log.photo_url}
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {cameraDeletions.length === 0 && (
+                                            <tr id="logs-list-empty">
+                                                <td colspan="3" class="py-8 text-center text-stone-500 font-cinzel">Belum ada riwayat log penghapusan foto.</td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Master Action Form */}
                 <form id="action-form" method="POST" style="display:none;">
                     <input type="hidden" name="password" value={passwordVal} />
@@ -882,14 +1267,17 @@ function parseUtcIsoToLocal(utcIso: string) {
     const btnWishes = document.getElementById('tab-wishes');
     const btnSettings = document.getElementById('tab-settings');
     const btnCamera = document.getElementById('tab-camera');
+    const btnUsage = document.getElementById('tab-usage');
     const viewWishes = document.getElementById('view-wishes');
     const viewSettings = document.getElementById('view-settings');
     const viewCamera = document.getElementById('view-camera');
+    const viewUsage = document.getElementById('view-usage');
 
     const tabs = [
         { btn: btnWishes, view: viewWishes },
         { btn: btnSettings, view: viewSettings },
-        { btn: btnCamera, view: viewCamera }
+        { btn: btnCamera, view: viewCamera },
+        { btn: btnUsage, view: viewUsage }
     ];
 
     tabs.forEach(tab => {
@@ -1272,43 +1660,394 @@ function parseUtcIsoToLocal(utcIso: string) {
         }
     });
 
-    // Admin Voice Playback logic
+    // Admin Voice Playback logic (Event Delegation)
     let adminPlayingAudio = null;
     let adminPlayingBtn = null;
 
-    document.querySelectorAll('.admin-voice-play-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const url = btn.getAttribute('data-voice-url');
-            if (!url) return;
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.admin-voice-play-btn');
+        if (!btn) return;
+        
+        const url = btn.getAttribute('data-voice-url');
+        if (!url) return;
 
-            if (adminPlayingBtn === btn) {
-                if (adminPlayingAudio.paused) {
-                    adminPlayingAudio.play();
-                    btn.innerHTML = '<i class="fa-solid fa-pause text-[8px]"></i>';
-                } else {
-                    adminPlayingAudio.pause();
-                    btn.innerHTML = '<i class="fa-solid fa-play text-[8px] translate-x-px"></i>';
-                }
-                return;
-            }
-
-            if (adminPlayingAudio) {
+        if (adminPlayingBtn === btn) {
+            if (adminPlayingAudio.paused) {
+                adminPlayingAudio.play();
+                btn.innerHTML = '<i class="fa-solid fa-pause text-[8px]"></i>';
+            } else {
                 adminPlayingAudio.pause();
-                if (adminPlayingBtn) {
-                    adminPlayingBtn.innerHTML = '<i class="fa-solid fa-play text-[8px] translate-x-px"></i>';
-                }
-            }
-
-            adminPlayingAudio = new Audio(url);
-            adminPlayingBtn = btn;
-            adminPlayingAudio.play();
-            btn.innerHTML = '<i class="fa-solid fa-pause text-[8px]"></i>';
-
-            adminPlayingAudio.addEventListener('ended', () => {
                 btn.innerHTML = '<i class="fa-solid fa-play text-[8px] translate-x-px"></i>';
-                adminPlayingAudio = null;
-                adminPlayingBtn = null;
-            });
+            }
+            return;
+        }
+
+        if (adminPlayingAudio) {
+            adminPlayingAudio.pause();
+            if (adminPlayingBtn) {
+                adminPlayingBtn.innerHTML = '<i class="fa-solid fa-play text-[8px] translate-x-px"></i>';
+            }
+        }
+
+        adminPlayingAudio = new Audio(url);
+        adminPlayingBtn = btn;
+        adminPlayingAudio.play();
+        btn.innerHTML = '<i class="fa-solid fa-pause text-[8px]"></i>';
+
+        adminPlayingAudio.addEventListener('ended', () => {
+            btn.innerHTML = '<i class="fa-solid fa-play text-[8px] translate-x-px"></i>';
+            adminPlayingAudio = null;
+            adminPlayingBtn = null;
         });
+    });
+
+    // Client-side dynamic refresh for Supabase storage, database, and RSVP stats
+    const refreshUsageBtn = document.getElementById('refresh-usage-btn');
+    refreshUsageBtn?.addEventListener('click', async () => {
+        const originalText = refreshUsageBtn.innerHTML;
+        refreshUsageBtn.disabled = true;
+        refreshUsageBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memuat...';
+
+        try {
+            const masterPass = document.getElementsByName('password')[0]?.value || '';
+            const res = await fetch(`/api/admin-stats?adminPass=${encodeURIComponent(masterPass)}`);
+            if (res.ok) {
+                const data = await res.json();
+                
+                // Helper to format bytes client-side
+                const formatBytes = (bytes, decimals = 2) => {
+                    if (bytes === 0) return '0 Bytes';
+                    const k = 1024;
+                    const dm = decimals < 0 ? 0 : decimals;
+                    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+                    const i = Math.floor(Math.log(bytes) / Math.log(k));
+                    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+                };
+
+                const storage = data.storage;
+                const db = data.database;
+
+                const cameraSize = storage.camera.totalSize;
+                const photosSize = storage.photos.totalSize;
+                const totalStorageSize = cameraSize + photosSize;
+                const totalStorageFiles = storage.camera.fileCount + storage.photos.fileCount;
+                const storageLimit = 1024 * 1024 * 1024; // 1 GB
+                const storagePercentage = Math.min((totalStorageSize / storageLimit) * 100, 100);
+                const totalDbRows = db.wishesCount + db.voicesCount + db.cameraPhotosCount + db.cameraDeletionsCount;
+
+                // RSVP calculations
+                const rsvpCount = db.rsvp.count;
+                const pctAttending = rsvpCount > 0 ? (db.rsvp.attending / rsvpCount) * 100 : 0;
+                const pctNotAttending = rsvpCount > 0 ? (db.rsvp.notAttending / rsvpCount) * 100 : 0;
+                const pctTentative = rsvpCount > 0 ? (db.rsvp.tentative / rsvpCount) * 100 : 0;
+                const rsvpAverageGuests = db.rsvp.attending > 0 ? (db.rsvp.totalGuests / db.rsvp.attending) : 0;
+
+                // Update Overview Cards
+                const statTotalStorage = document.getElementById('stat-total-storage');
+                if (statTotalStorage) statTotalStorage.innerText = formatBytes(totalStorageSize);
+
+                const barTotalStorage = document.getElementById('bar-total-storage');
+                if (barTotalStorage) barTotalStorage.style.width = `${storagePercentage}%`;
+
+                const txtStorageFiles = document.getElementById('txt-storage-files');
+                if (txtStorageFiles) txtStorageFiles.innerText = `${totalStorageFiles} file terunggah`;
+
+                const txtStoragePercentage = document.getElementById('txt-storage-percentage');
+                if (txtStoragePercentage) txtStoragePercentage.innerText = `${storagePercentage.toFixed(3)}% digunakan`;
+
+                const statTotalRows = document.getElementById('stat-total-rows');
+                if (statTotalRows) statTotalRows.innerText = totalDbRows;
+
+                const barTotalRows = document.getElementById('bar-total-rows');
+                if (barTotalRows) barTotalRows.style.width = `${Math.min((totalDbRows / 5000) * 100, 100)}%`;
+
+                // Update RSVP Card
+                const statRsvpGuests = document.getElementById('stat-rsvp-guests');
+                if (statRsvpGuests) statRsvpGuests.innerText = db.rsvp.totalGuests;
+
+                const barRsvpAttending = document.getElementById('bar-rsvp-attending');
+                if (barRsvpAttending) {
+                    barRsvpAttending.style.width = `${pctAttending}%`;
+                    barRsvpAttending.title = `Hadir: ${pctAttending.toFixed(1)}%`;
+                }
+
+                const barRsvpNotAttending = document.getElementById('bar-rsvp-notattending');
+                if (barRsvpNotAttending) {
+                    barRsvpNotAttending.style.width = `${pctNotAttending}%`;
+                    barRsvpNotAttending.title = `Tidak Hadir: ${pctNotAttending.toFixed(1)}%`;
+                }
+
+                const barRsvpTentative = document.getElementById('bar-rsvp-tentative');
+                if (barRsvpTentative) {
+                    barRsvpTentative.style.width = `${pctTentative}%`;
+                    barRsvpTentative.title = `Ragu-ragu: ${pctTentative.toFixed(1)}%`;
+                }
+
+                const txtRsvpAverage = document.getElementById('txt-rsvp-average');
+                if (txtRsvpAverage) txtRsvpAverage.innerText = `Rata-rata: ${rsvpAverageGuests.toFixed(1)} pax`;
+
+                const txtRsvpTotal = document.getElementById('txt-rsvp-total');
+                if (txtRsvpTotal) txtRsvpTotal.innerText = `${rsvpCount} respon`;
+
+                // Update Bucket details
+                const bucketCameraSize = document.getElementById('bucket-camera-size');
+                if (bucketCameraSize) bucketCameraSize.innerText = formatBytes(cameraSize);
+
+                const bucketCameraCount = document.getElementById('bucket-camera-count');
+                if (bucketCameraCount) bucketCameraCount.innerText = `${storage.camera.fileCount} file`;
+
+                const bucketPhotosSize = document.getElementById('bucket-photos-size');
+                if (bucketPhotosSize) bucketPhotosSize.innerText = formatBytes(photosSize);
+
+                const bucketPhotosCount = document.getElementById('bucket-photos-count');
+                if (bucketPhotosCount) bucketPhotosCount.innerText = `${storage.photos.fileCount} file`;
+
+                // Update Table rows count
+                const tblRowWishes = document.getElementById('tbl-row-wishes');
+                if (tblRowWishes) tblRowWishes.innerText = db.wishesCount;
+
+                const tblRowVoices = document.getElementById('tbl-row-voices');
+                if (tblRowVoices) tblRowVoices.innerText = db.voicesCount;
+
+                const tblRowPhotos = document.getElementById('tbl-row-photos');
+                if (tblRowPhotos) tblRowPhotos.innerText = db.cameraPhotosCount;
+
+                const tblRowDeletions = document.getElementById('tbl-row-deletions');
+                if (tblRowDeletions) tblRowDeletions.innerText = db.cameraDeletionsCount;
+
+                const lblTotalFilesCount = document.getElementById('lbl-total-files-count');
+                if (lblTotalFilesCount) lblTotalFilesCount.innerText = `${totalStorageFiles} Berkas Terdeteksi`;
+
+                // Re-render storage files list
+                const filesListBody = document.getElementById('files-list-body');
+                if (filesListBody) {
+                    const allFiles = [
+                        ...storage.camera.fileList.map(f => ({ ...f, bucket: 'disposable-camera' })),
+                        ...storage.photos.fileList.map(f => ({ ...f, bucket: 'photos' }))
+                    ];
+                    // Sort descending by updated_at
+                    allFiles.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+
+                    if (allFiles.length === 0) {
+                        filesListBody.innerHTML = `
+                            <tr id="files-list-empty">
+                                <td colspan="4" class="py-8 text-center text-stone-500 font-cinzel">Tidak ada berkas yang tersimpan di storage.</td>
+                            </tr>
+                        `;
+                    } else {
+                        // Build sets for orphan detection client side
+                        const activeDbUrls = new Set(db.activeDbUrls || []);
+                        const activeSettingsUrls = new Set([
+                            db.settings.groom_photo,
+                            db.settings.bride_photo,
+                            db.settings.hero_bg
+                        ]);
+
+                        let html = '';
+                        allFiles.forEach(file => {
+                            let isOrphan = false;
+                            if (file.bucket === 'disposable-camera') {
+                                isOrphan = !activeDbUrls.has(file.url);
+                            } else if (file.bucket === 'photos') {
+                                isOrphan = !activeSettingsUrls.has(file.url) && !activeSettingsUrls.has('/' + file.name) && !activeSettingsUrls.has(file.name);
+                            }
+
+                            const isLarge = file.size > 3 * 1024 * 1024;
+                            const isAudio = file.name.endsWith('.mp3') || file.name.endsWith('.wav') || file.name.includes('/voices/');
+
+                            html += `
+                                <tr class="hover:bg-stone-900/40 transition" data-file-row-bucket="${file.bucket}" data-file-row-name="${file.name}">
+                                    <td class="py-2 px-2 text-gold/80 text-[10px]">${file.bucket}</td>
+                                    <td class="py-2 px-2 font-sans text-stone-200" title="${file.name}">
+                                        <div class="flex flex-wrap items-center gap-1.5">
+                                            <span class="truncate max-w-[200px] sm:max-w-xs">${file.name}</span>
+                                            ${isOrphan ? `<span class="px-1.5 py-0.5 bg-red-950/80 text-red-400 border border-red-900/40 text-[8px] font-bold uppercase rounded font-mono select-none" title="Berkas ini tidak terhubung dengan ucapan atau pengaturan undangan. Aman untuk dihapus.">Orphan</span>` : ''}
+                                            ${isLarge ? `<span class="px-1.5 py-0.5 bg-amber-950/80 text-amber-400 border border-amber-900/40 text-[8px] font-bold uppercase rounded font-mono select-none" title="Berkas berukuran besar (> 3MB) yang memakan kuota penyimpanan.">Besar</span>` : ''}
+                                        </div>
+                                    </td>
+                                    <td class="py-2 px-2 text-right text-stone-300">${formatBytes(file.size)}</td>
+                                    <td class="py-2 px-2 text-center">
+                                        <div class="flex items-center justify-center gap-1.5">
+                                            ${isAudio ? `
+                                                <button 
+                                                    class="admin-voice-play-btn w-6 h-6 rounded bg-stone-950 hover:bg-gold/20 text-stone-400 hover:text-gold border border-stone-850 hover:border-gold/30 flex items-center justify-center transition cursor-pointer active:scale-90"
+                                                    data-voice-url="${file.url}"
+                                                    title="Putar Rekaman Suara"
+                                                >
+                                                    <i class="fa-solid fa-play text-[8px] translate-x-px"></i>
+                                                </button>
+                                            ` : ''}
+                                            
+                                            <a 
+                                                href="${file.url}" 
+                                                target="_blank" 
+                                                rel="noopener noreferrer" 
+                                                class="inline-flex items-center justify-center w-6 h-6 rounded bg-stone-950 hover:bg-gold/20 text-stone-400 hover:text-gold border border-stone-850 hover:border-gold/30 transition cursor-pointer active:scale-95"
+                                                title="Lihat Berkas di Tab Baru"
+                                            >
+                                                <i class="fa-solid fa-up-right-from-square text-[9px]"></i>
+                                            </a>
+
+                                            ${isOrphan ? `
+                                                <button 
+                                                    class="admin-file-delete-btn w-6 h-6 rounded bg-red-950/45 hover:bg-red-900/80 text-red-400 hover:text-white border border-red-900/40 hover:border-red-650 flex items-center justify-center transition cursor-pointer active:scale-90"
+                                                    data-file-bucket="${file.bucket}"
+                                                    data-file-path="${file.name}"
+                                                    title="Hapus Berkas dari Storage secara Permanen"
+                                                >
+                                                    <i class="fa-solid fa-trash-can text-[9px]"></i>
+                                                </button>
+                                            ` : ''}
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                        filesListBody.innerHTML = html;
+                    }
+                }
+
+                // Re-render safety logs list
+                const logsListBody = document.getElementById('logs-list-body');
+                if (logsListBody) {
+                    const logs = db.deletionsList || [];
+                    if (logs.length === 0) {
+                        logsListBody.innerHTML = `
+                            <tr id="logs-list-empty">
+                                <td colspan="3" class="py-8 text-center text-stone-500 font-cinzel">Belum ada riwayat log penghapusan foto.</td>
+                            </tr>
+                        `;
+                    } else {
+                        let html = '';
+                        logs.forEach(log => {
+                            const dateStr = new Date(log.deleted_at).toLocaleString('id-ID');
+                            const guestName = log.guest_id.split('#')[0];
+                            const guestIdPart = log.guest_id.includes('#') ? `<span class="text-[9px] text-stone-500 font-mono">#${log.guest_id.split('#')[1]}</span>` : '';
+                            const fileName = log.photo_url.split('/').pop() || log.photo_url;
+                            
+                            html += `
+                                <tr class="hover:bg-stone-900/40 transition">
+                                    <td class="py-2 px-2 text-[10px] text-stone-400">${dateStr}</td>
+                                    <td class="py-2 px-2 text-stone-200 font-sans">${guestName} ${guestIdPart}</td>
+                                    <td class="py-2 px-2 truncate max-w-sm font-sans text-stone-400" title="${log.photo_url}">
+                                        <a href="${log.photo_url}" target="_blank" rel="noopener noreferrer" class="hover:text-gold transition flex items-center gap-1.5">
+                                            <i class="fa-solid fa-up-right-from-square text-[8px]"></i> ${fileName}
+                                        </a>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                        logsListBody.innerHTML = html;
+                    }
+                }
+
+                triggerAdminToast("Statistik penyimpanan berhasil diperbarui!");
+            } else {
+                const err = await res.json();
+                alert("Gagal memperbarui statistik: " + (err.error || "Kesalahan server"));
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Kesalahan koneksi saat memperbarui statistik.");
+        } finally {
+            refreshUsageBtn.disabled = false;
+            refreshUsageBtn.innerHTML = originalText;
+        }
+    });
+
+    // Delete orphan file storage click handler delegation
+    document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.admin-file-delete-btn');
+        if (!btn) return;
+
+        const bucket = btn.getAttribute('data-file-bucket');
+        const filePath = btn.getAttribute('data-file-path');
+        if (!bucket || !filePath) return;
+
+        if (!confirm(`Hapus berkas "${filePath}" secara permanen dari Supabase Storage "${bucket}"? Tindakan ini tidak dapat dibatalkan.`)) {
+            return;
+        }
+
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-[9px]"></i>';
+
+        try {
+            const masterPass = document.getElementsByName('password')[0]?.value || '';
+            const res = await fetch('/api/admin-storage-action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'delete-file',
+                    password: masterPass,
+                    bucket,
+                    filePath
+                })
+            });
+
+            if (res.ok) {
+                const row = document.querySelector(`[data-file-row-bucket="${bucket}"][data-file-row-name="${filePath}"]`);
+                if (row) {
+                    row.style.opacity = '0';
+                    row.style.transform = 'scale(0.8)';
+                    setTimeout(() => {
+                        row.remove();
+                        refreshUsageBtn?.click();
+                    }, 300);
+                }
+                triggerAdminToast("Berkas berhasil dihapus secara permanen dari storage!");
+            } else {
+                const err = await res.json();
+                alert("Gagal menghapus berkas: " + (err.error || "Kesalahan server"));
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Kesalahan koneksi saat menghapus berkas.");
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
+    });
+
+    // Clear deletion activity logs handler delegation
+    document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('#clear-logs-btn');
+        if (!btn) return;
+
+        if (!confirm('Bersihkan semua riwayat audit log penghapusan foto secara permanen dari basis data? Batas hapus tamu tidak akan terpengaruh.')) {
+            return;
+        }
+
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1 text-[9px]"></i> Memproses...';
+
+        try {
+            const masterPass = document.getElementsByName('password')[0]?.value || '';
+            const res = await fetch('/api/admin-storage-action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'clear-deletions-log',
+                    password: masterPass
+                })
+            });
+
+            if (res.ok) {
+                triggerAdminToast("Log aktivitas berhasil dibersihkan!");
+                refreshUsageBtn?.click();
+            } else {
+                const err = await res.json();
+                alert("Gagal membersihkan log: " + (err.error || "Kesalahan server"));
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Kesalahan koneksi saat membersihkan log.");
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
     });
 </script>
