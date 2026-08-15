@@ -1,5 +1,34 @@
 ---
 const { settings } = Astro.props;
+const groomPhoto = settings.groom_photo || '';
+const bridePhoto = settings.bride_photo || '';
+
+// Retrieve position parameter
+function getUrlPosition(url) {
+    if (!url) return 'center';
+    try {
+        const match = url.match(/[\?&]pos=([^&]+)/);
+        return match ? decodeURIComponent(match[1]).replace('_', ' ') : 'center';
+    } catch (e) {
+        return 'center';
+    }
+}
+
+// Retrieve zoom parameter
+function getUrlZoom(url) {
+    if (!url) return '1';
+    try {
+        const match = url.match(/[\?&]zoom=([^&]+)/);
+        return match ? decodeURIComponent(match[1]) : '1';
+    } catch (e) {
+        return '1';
+    }
+}
+
+const groomPos = getUrlPosition(groomPhoto);
+const groomZoom = getUrlZoom(groomPhoto);
+const bridePos = getUrlPosition(bridePhoto);
+const brideZoom = getUrlZoom(bridePhoto);
 ---
 <section class="py-24 px-4 bg-stone-900 text-stone-100 relative">
     <div class="max-w-5xl mx-auto text-center">
@@ -9,8 +38,8 @@ const { settings } = Astro.props;
         <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <!-- Groom -->
             <div class="bg-stone-950/80 p-8 rounded-2xl border border-gold/30 shadow-2xl relative group reveal">
-                <div class="w-48 h-48 mx-auto rounded-full overflow-hidden border-2 border-gold mb-6 shadow-lg">
-                    <img src={settings.groom_photo} alt={settings.groom_name_short} class="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
+                <div class="w-48 h-48 mx-auto rounded-full overflow-hidden border-2 border-gold mb-6 shadow-lg hover:scale-105 transition duration-500">
+                    <img src={groomPhoto} alt={settings.groom_name_short} class="w-full h-full object-cover" style={`object-position: ${groomPos}; transform: scale(${groomZoom}); transform-origin: ${groomPos};`} />
                 </div>
                 <h3 class="font-cinzel font-bold text-2xl text-gold mb-2">{settings.groom_name_full}</h3>
                 <p class="text-stone-400 text-sm mb-4">Putra Kedua dari<br>{settings.groom_parents}</p>
@@ -21,8 +50,8 @@ const { settings } = Astro.props;
 
             <!-- Bride -->
             <div class="bg-stone-950/80 p-8 rounded-2xl border border-gold/30 shadow-2xl relative group reveal">
-                <div class="w-48 h-48 mx-auto rounded-full overflow-hidden border-2 border-gold mb-6 shadow-lg">
-                    <img src={settings.bride_photo} alt={settings.bride_name_short} class="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
+                <div class="w-48 h-48 mx-auto rounded-full overflow-hidden border-2 border-gold mb-6 shadow-lg hover:scale-105 transition duration-500">
+                    <img src={bridePhoto} alt={settings.bride_name_short} class="w-full h-full object-cover" style={`object-position: ${bridePos}; transform: scale(${brideZoom}); transform-origin: ${bridePos};`} />
                 </div>
                 <h3 class="font-cinzel font-bold text-2xl text-gold mb-2">{settings.bride_name_full}</h3>
                 <p class="text-stone-400 text-sm mb-4">Putri Pertama dari<br>{settings.bride_parents}</p>

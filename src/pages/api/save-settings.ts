@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase.server';
 
 // POST api/save-settings: Update dynamic CMS fields
 export const POST: APIRoute = async ({ request }) => {

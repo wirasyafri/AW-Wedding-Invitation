@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase.server';
 
 // POST api/like: Increment likes for a wish
 export const POST: APIRoute = async ({ request }) => {

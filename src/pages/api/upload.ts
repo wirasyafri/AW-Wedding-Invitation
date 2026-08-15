@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase.server';
 
 // Helper to extract the filename from a Supabase Storage URL
 function extractFilename(url: string) {

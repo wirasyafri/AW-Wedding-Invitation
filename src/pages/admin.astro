@@ -362,6 +362,28 @@ function formatBytes(bytes: number, decimals = 2) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
+// Helper to retrieve the focus/position query parameter from image URLs
+function getUrlPosition(url: string) {
+    if (!url) return 'center';
+    try {
+        const match = url.match(/[\?&]pos=([^&]+)/);
+        return match ? decodeURIComponent(match[1]).replace('_', ' ') : 'center';
+    } catch (e) {
+        return 'center';
+    }
+}
+
+// Helper to retrieve the zoom scaling parameter from image URLs
+function getUrlZoom(url: string) {
+    if (!url) return '1';
+    try {
+        const match = url.match(/[\?&]zoom=([^&]+)/);
+        return match ? decodeURIComponent(match[1]) : '1';
+    } catch (e) {
+        return '1';
+    }
+}
+
 // Active database and settings URLs for orphan detection
 const activeDbUrls = new Set([
     ...cameraPhotos.map(p => p.url),
@@ -592,9 +614,27 @@ const activeSettingsUrls = new Set([
                                         
                                         {/* Image Preview container */}
                                         <div class="mb-3 flex items-center gap-3">
-                                            <div class="relative w-20 h-20 bg-stone-950 rounded-lg border border-stone-800 overflow-hidden flex items-center justify-center">
-                                                <img id="groom_photo_preview" src={activeSettings.groom_photo} class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.style.display='block'; this.nextElementSibling.style.display='none';" />
+                                            <button 
+                                                type="button"
+                                                id="groom_photo_preview_btn"
+                                                class="relative w-20 h-20 bg-stone-950 rounded-full border border-stone-800 overflow-hidden flex items-center justify-center cursor-pointer hover:border-gold transition group focus:outline-none"
+                                                title="Klik untuk memotong & zoom foto"
+                                            >
+                                                <img 
+                                                    id="groom_photo_preview" 
+                                                    src={activeSettings.groom_photo} 
+                                                    class="w-full h-full object-cover pointer-events-none" 
+                                                    style={`object-position: ${getUrlPosition(activeSettings.groom_photo)}; transform: scale(${getUrlZoom(activeSettings.groom_photo)}); transform-origin: ${getUrlPosition(activeSettings.groom_photo)};`}
+                                                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" 
+                                                    onload="this.style.display='block'; this.nextElementSibling.style.display='none';" 
+                                                />
                                                 <div class="hidden w-full h-full items-center justify-center text-stone-600 text-[9px] uppercase font-cinzel font-bold">No Image</div>
+                                                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                                                    <i class="fa-solid fa-crop-simple text-stone-200 text-xs"></i>
+                                                </div>
+                                            </button>
+                                            <div class="text-[10px] text-stone-500 uppercase tracking-wider font-cinzel">
+                                                Klik lingkaran foto<br/>untuk potong & zoom
                                             </div>
                                         </div>
 
@@ -642,9 +682,27 @@ const activeSettingsUrls = new Set([
                                         
                                         {/* Image Preview container */}
                                         <div class="mb-3 flex items-center gap-3">
-                                            <div class="relative w-20 h-20 bg-stone-950 rounded-lg border border-stone-800 overflow-hidden flex items-center justify-center">
-                                                <img id="bride_photo_preview" src={activeSettings.bride_photo} class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.style.display='block'; this.nextElementSibling.style.display='none';" />
+                                            <button 
+                                                type="button"
+                                                id="bride_photo_preview_btn"
+                                                class="relative w-20 h-20 bg-stone-950 rounded-full border border-stone-800 overflow-hidden flex items-center justify-center cursor-pointer hover:border-gold transition group focus:outline-none"
+                                                title="Klik untuk memotong & zoom foto"
+                                            >
+                                                <img 
+                                                    id="bride_photo_preview" 
+                                                    src={activeSettings.bride_photo} 
+                                                    class="w-full h-full object-cover pointer-events-none" 
+                                                    style={`object-position: ${getUrlPosition(activeSettings.bride_photo)}; transform: scale(${getUrlZoom(activeSettings.bride_photo)}); transform-origin: ${getUrlPosition(activeSettings.bride_photo)};`}
+                                                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" 
+                                                    onload="this.style.display='block'; this.nextElementSibling.style.display='none';" 
+                                                />
                                                 <div class="hidden w-full h-full items-center justify-center text-stone-600 text-[9px] uppercase font-cinzel font-bold">No Image</div>
+                                                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                                                    <i class="fa-solid fa-crop-simple text-stone-200 text-xs"></i>
+                                                </div>
+                                            </button>
+                                            <div class="text-[10px] text-stone-500 uppercase tracking-wider font-cinzel">
+                                                Klik lingkaran foto<br/>untuk potong & zoom
                                             </div>
                                         </div>
 
@@ -771,9 +829,27 @@ const activeSettingsUrls = new Set([
                                     
                                     {/* Image Preview container */}
                                     <div class="mb-3 flex items-center gap-3">
-                                        <div class="relative w-36 h-20 bg-stone-950 rounded-lg border border-stone-800 overflow-hidden flex items-center justify-center">
-                                            <img id="hero_bg_preview" src={activeSettings.hero_bg} class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.style.display='block'; this.nextElementSibling.style.display='none';" />
+                                        <button 
+                                            type="button"
+                                            id="hero_bg_preview_btn"
+                                            class="relative w-36 h-20 bg-stone-950 rounded-lg border border-stone-800 overflow-hidden flex items-center justify-center cursor-pointer hover:border-gold transition group focus:outline-none"
+                                            title="Klik untuk memotong & zoom foto"
+                                        >
+                                            <img 
+                                                id="hero_bg_preview" 
+                                                src={activeSettings.hero_bg} 
+                                                class="w-full h-full object-cover pointer-events-none" 
+                                                style={`object-position: ${getUrlPosition(activeSettings.hero_bg)}; transform: scale(${getUrlZoom(activeSettings.hero_bg)}); transform-origin: ${getUrlPosition(activeSettings.hero_bg)};`}
+                                                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" 
+                                                onload="this.style.display='block'; this.nextElementSibling.style.display='none';" 
+                                            />
                                             <div class="hidden w-full h-full items-center justify-center text-stone-600 text-[9px] uppercase font-cinzel font-bold">No Image</div>
+                                            <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                                                <i class="fa-solid fa-crop-simple text-stone-200 text-xs"></i>
+                                            </div>
+                                        </button>
+                                        <div class="text-[10px] text-stone-500 uppercase tracking-wider font-cinzel">
+                                            Klik kotak foto<br/>untuk potong & zoom
                                         </div>
                                     </div>
 
@@ -1256,6 +1332,64 @@ const activeSettingsUrls = new Set([
         </footer>
     </div>
 
+    {/* Image Cropper & Zoom Modal */}
+    <div id="cropper-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/85 backdrop-blur-sm p-4">
+        <div class="bg-stone-900 border border-stone-800 rounded-2xl w-full max-w-sm p-5 shadow-2xl flex flex-col items-center space-y-5 animate-scale-up">
+            <div class="w-full text-center">
+                <h3 id="cropper-modal-title" class="font-cinzel text-xs text-gold uppercase tracking-wider font-bold">Sesuaikan Foto</h3>
+                <p class="text-stone-500 text-[9px] uppercase tracking-widest mt-1.5 leading-relaxed">Geser foto untuk memotong, geser slider untuk zoom</p>
+            </div>
+
+            {/* Viewport container */}
+            <div class="relative flex items-center justify-center w-full h-52 bg-stone-950/40 border border-stone-850 rounded-xl overflow-hidden">
+                {/* Dynamically styled viewport circle (Groom/Bride) or rectangle (Hero BG) */}
+                <div id="cropper-viewport" class="relative overflow-hidden border border-gold/40 shadow-inner w-40 h-40 rounded-full">
+                    <img id="cropper-image" class="w-full h-full object-cover pointer-events-none" src="" style="object-position: center; transform: scale(1.0);" />
+                </div>
+                {/* Grab/drag overlay */}
+                <div id="cropper-grab-overlay" class="absolute inset-0 cursor-grab active:cursor-grabbing z-10 flex items-center justify-center touch-none" style="touch-action: none;">
+                    <div id="cropper-guidelines" class="absolute inset-0 border border-dashed border-stone-500/20 pointer-events-none rounded-[inherit] w-40 h-40"></div>
+                </div>
+            </div>
+
+            {/* Zoom Slider */}
+            <div class="w-full space-y-2">
+                <div class="flex justify-between items-center text-[8px] text-stone-400 font-mono uppercase tracking-wider">
+                    <span>1.0x</span>
+                    <span id="cropper-zoom-label">Zoom: 1.00x</span>
+                    <span>3.0x</span>
+                </div>
+                <input 
+                    type="range" 
+                    id="cropper-zoom-slider" 
+                    min="1" 
+                    max="3" 
+                    step="0.01" 
+                    value="1.00" 
+                    class="w-full accent-gold bg-stone-800 h-1 rounded-lg appearance-none cursor-pointer" 
+                />
+            </div>
+
+            {/* Action buttons */}
+            <div class="w-full flex gap-3 pt-1">
+                <button 
+                    type="button"
+                    id="cropper-cancel-btn" 
+                    class="flex-1 py-2 bg-stone-950 hover:bg-stone-900 border border-stone-850 text-stone-400 hover:text-stone-200 text-xs font-cinzel rounded-lg transition active:scale-95 cursor-pointer focus:outline-none"
+                >
+                    Batal
+                </button>
+                <button 
+                    type="button"
+                    id="cropper-save-btn" 
+                    class="flex-1 py-2 bg-gold hover:bg-gold-light text-stone-950 font-bold text-xs font-cinzel rounded-lg transition active:scale-95 cursor-pointer shadow-lg focus:outline-none"
+                >
+                    Terapkan
+                </button>
+            </div>
+        </div>
+    </div>
+
     {/* Toast notification component for admin success feedbacks */}
     <div id="admin-toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gold text-stone-950 font-cinzel text-xs font-bold py-3 px-6 rounded-lg shadow-2xl opacity-0 transform translate-y-0 transition-all duration-300 z-50 pointer-events-none">
         Pengaturan berhasil disimpan!
@@ -1348,23 +1482,258 @@ const activeSettingsUrls = new Set([
     setupImageToggle('bride_photo_type', 'bride_photo_url_wrapper', 'bride_photo_file_wrapper');
     setupImageToggle('hero_bg_type', 'hero_bg_url_wrapper', 'hero_bg_file_wrapper');
 
-    // Update preview helper
-    const updatePreview = (inputId, previewId) => {
-        const input = document.getElementById(inputId);
-        const preview = document.getElementById(previewId);
-        if (input && preview) {
-            preview.src = input.value;
-            preview.style.display = input.value ? 'block' : 'none';
-            if (preview.nextElementSibling) {
-                preview.nextElementSibling.style.display = input.value ? 'none' : 'flex';
-            }
+    // Client-side helper to retrieve position parameter from URL
+    const getUrlPositionClient = (url) => {
+        if (!url) return 'center';
+        try {
+            const match = url.match(/[\?&]pos=([^&]+)/);
+            return match ? decodeURIComponent(match[1]) : 'center';
+        } catch (e) {
+            return 'center';
         }
     };
 
-    // Trigger preview update when URL inputs change
-    document.getElementById('groom_photo')?.addEventListener('input', () => updatePreview('groom_photo', 'groom_photo_preview'));
-    document.getElementById('bride_photo')?.addEventListener('input', () => updatePreview('bride_photo', 'bride_photo_preview'));
-    document.getElementById('hero_bg')?.addEventListener('input', () => updatePreview('hero_bg', 'hero_bg_preview'));
+    // Client-side helper to retrieve zoom parameter from URL
+    const getUrlZoomClient = (url) => {
+        if (!url) return 1.0;
+        try {
+            const match = url.match(/[\?&]zoom=([^&]+)/);
+            return match ? parseFloat(decodeURIComponent(match[1])) || 1.0 : 1.0;
+        } catch (e) {
+            return 1.0;
+        }
+    };
+
+    // Client-side helper to update position and zoom parameters in URL
+    const updateUrlParamsClient = (url, position, zoom) => {
+        if (!url) return '';
+        if (url === "Mengunggah berkas...") return url;
+        try {
+            let cleanUrl = url.replace(/[\?&]pos=[^&]+/g, '').replace(/[\?&]zoom=[^&]+/g, '');
+            const hasQuery = cleanUrl.includes('?');
+            const separator = hasQuery ? '&' : '?';
+            return cleanUrl + separator + 'pos=' + encodeURIComponent(position) + '&zoom=' + encodeURIComponent(zoom);
+        } catch (e) {
+            return url;
+        }
+    };
+
+    // Sync image URL, preview display, position and zoom style
+    const syncImageParams = (inputId, previewId) => {
+        const input = document.getElementById(inputId);
+        const preview = document.getElementById(previewId);
+
+        if (!input || !preview) return;
+
+        const url = input.value;
+        const position = getUrlPositionClient(url);
+        const zoom = getUrlZoomClient(url);
+        const cleanPos = position.replace('_', ' ');
+
+        preview.src = url;
+        preview.style.objectPosition = cleanPos;
+        preview.style.transform = `scale(${zoom})`;
+        preview.style.transformOrigin = cleanPos;
+        preview.style.display = url ? 'block' : 'none';
+        if (preview.nextElementSibling) {
+            preview.nextElementSibling.style.display = url ? 'none' : 'flex';
+        }
+    };
+
+    // Image Cropper Modal logic
+    const cropperModal = document.getElementById('cropper-modal');
+    const cropperTitle = document.getElementById('cropper-modal-title');
+    const cropperViewport = document.getElementById('cropper-viewport');
+    const cropperImage = document.getElementById('cropper-image');
+    const cropperGrabOverlay = document.getElementById('cropper-grab-overlay');
+    const cropperGuidelines = document.getElementById('cropper-guidelines');
+    const cropperZoomSlider = document.getElementById('cropper-zoom-slider');
+    const cropperZoomLabel = document.getElementById('cropper-zoom-label');
+    const cropperCancelBtn = document.getElementById('cropper-cancel-btn');
+    const cropperSaveBtn = document.getElementById('cropper-save-btn');
+
+    let activeInputId = null;
+    let activePreviewId = null;
+    let currentPosPercent = { x: 50, y: 50 };
+    let currentZoom = 1.0;
+
+    // Parse X and Y percentage coordinates from position string
+    const parsePositionPercent = (posStr) => {
+        if (!posStr || posStr === 'center') return { x: 50, y: 50 };
+        if (posStr === 'top') return { x: 50, y: 0 };
+        if (posStr === 'bottom') return { x: 50, y: 100 };
+        if (posStr === 'left') return { x: 0, y: 50 };
+        if (posStr === 'right') return { x: 100, y: 50 };
+
+        const cleanPos = posStr.replace('_', ' ');
+        const parts = cleanPos.split(' ');
+        if (parts.length === 2) {
+            const x = parseFloat(parts[0]) || 50;
+            const y = parseFloat(parts[1]) || 50;
+            return { x, y };
+        }
+        return { x: 50, y: 50 };
+    };
+
+    const openCropperModal = (inputId, previewId, titleText, isRound = true) => {
+        const input = document.getElementById(inputId);
+        if (!input || !input.value) {
+            alert("Harap masukkan atau unggah foto terlebih dahulu!");
+            return;
+        }
+
+        activeInputId = inputId;
+        activePreviewId = previewId;
+
+        const url = input.value;
+        const initialPos = getUrlPositionClient(url);
+        currentPosPercent = parsePositionPercent(initialPos);
+        currentZoom = getUrlZoomClient(url);
+
+        // Populate Modal Title and Image
+        if (cropperTitle) cropperTitle.innerText = titleText;
+        if (cropperImage) {
+            cropperImage.src = url;
+            cropperImage.style.objectPosition = `${currentPosPercent.x}% ${currentPosPercent.y}%`;
+            cropperImage.style.transform = `scale(${currentZoom})`;
+            cropperImage.style.transformOrigin = `${currentPosPercent.x}% ${currentPosPercent.y}%`;
+        }
+
+        // Apply circular/rectangular styling to Modal Viewport
+        if (cropperViewport && cropperGuidelines) {
+            if (isRound) {
+                cropperViewport.className = "relative overflow-hidden border border-gold/40 shadow-inner w-40 h-40 rounded-full";
+                cropperGuidelines.className = "absolute inset-0 border border-dashed border-stone-500/20 pointer-events-none rounded-full w-40 h-40";
+            } else {
+                cropperViewport.className = "relative overflow-hidden border border-gold/40 shadow-inner w-72 h-40 rounded-lg";
+                cropperGuidelines.className = "absolute inset-0 border border-dashed border-stone-500/20 pointer-events-none rounded-lg w-72 h-40";
+            }
+        }
+
+        // Set zoom slider value
+        if (cropperZoomSlider) {
+            cropperZoomSlider.value = currentZoom.toFixed(2);
+        }
+        if (cropperZoomLabel) {
+            cropperZoomLabel.innerText = `Zoom: ${currentZoom.toFixed(2)}x`;
+        }
+
+        // Show Modal overlay
+        if (cropperModal) {
+            cropperModal.classList.remove('hidden');
+        }
+    };
+
+    const closeCropperModal = () => {
+        if (cropperModal) {
+            cropperModal.classList.add('hidden');
+        }
+        activeInputId = null;
+        activePreviewId = null;
+    };
+
+    cropperCancelBtn?.addEventListener('click', closeCropperModal);
+
+    cropperSaveBtn?.addEventListener('click', () => {
+        if (!activeInputId || !activePreviewId) return;
+
+        const input = document.getElementById(activeInputId);
+        if (input) {
+            const posStr = `${currentPosPercent.x}%_${currentPosPercent.y}%`;
+            input.value = updateUrlParamsClient(input.value, posStr, currentZoom.toFixed(2));
+            syncImageParams(activeInputId, activePreviewId);
+        }
+        closeCropperModal();
+    });
+
+    // Zoom slider change handler
+    cropperZoomSlider?.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value) || 1.0;
+        currentZoom = val;
+        if (cropperZoomLabel) {
+            cropperZoomLabel.innerText = `Zoom: ${val.toFixed(2)}x`;
+        }
+        if (cropperImage) {
+            cropperImage.style.transform = `scale(${val})`;
+        }
+    });
+
+    // Drag-to-pan panning inside Modal Viewport
+    let isDraggingModalImage = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let dragStartPercentX = 50;
+    let dragStartPercentY = 50;
+
+    const onDragStart = (e) => {
+        if (e.type === 'mousedown' && e.button !== 0) return;
+        isDraggingModalImage = true;
+
+        const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+        const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+
+        dragStartX = clientX;
+        dragStartY = clientY;
+
+        dragStartPercentX = currentPosPercent.x;
+        dragStartPercentY = currentPosPercent.y;
+    };
+
+    const onDragMove = (e) => {
+        if (!isDraggingModalImage) return;
+
+        const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+        const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+
+        const deltaX = clientX - dragStartX;
+        const deltaY = clientY - dragStartY;
+
+        const width = cropperViewport.clientWidth;
+        const height = cropperViewport.clientHeight;
+
+        const deltaPercentX = -(deltaX / (width * currentZoom)) * 100;
+        const deltaPercentY = -(deltaY / (height * currentZoom)) * 100;
+
+        let newX = Math.max(0, Math.min(100, dragStartPercentX + deltaPercentX));
+        let newY = Math.max(0, Math.min(100, dragStartPercentY + deltaPercentY));
+
+        newX = Math.round(newX);
+        newY = Math.round(newY);
+
+        currentPosPercent = { x: newX, y: newY };
+        if (cropperImage) {
+            cropperImage.style.objectPosition = `${newX}% ${newY}%`;
+            cropperImage.style.transformOrigin = `${newX}% ${newY}%`;
+        }
+    };
+
+    const onDragEnd = () => {
+        isDraggingModalImage = false;
+    };
+
+    cropperGrabOverlay?.addEventListener('mousedown', onDragStart);
+    window.addEventListener('mousemove', onDragMove);
+    window.addEventListener('mouseup', onDragEnd);
+
+    cropperGrabOverlay?.addEventListener('touchstart', onDragStart, { passive: true });
+    window.addEventListener('touchmove', onDragMove, { passive: false });
+    window.addEventListener('touchend', onDragEnd);
+
+    // Attach click events to settings preview buttons
+    document.getElementById('groom_photo_preview_btn')?.addEventListener('click', () => {
+        openCropperModal('groom_photo', 'groom_photo_preview', 'Sesuaikan Foto Mempelai Pria', true);
+    });
+    document.getElementById('bride_photo_preview_btn')?.addEventListener('click', () => {
+        openCropperModal('bride_photo', 'bride_photo_preview', 'Sesuaikan Foto Mempelai Wanita', true);
+    });
+    document.getElementById('hero_bg_preview_btn')?.addEventListener('click', () => {
+        openCropperModal('hero_bg', 'hero_bg_preview', 'Sesuaikan Background Hero', false);
+    });
+
+    // Synchronize inputs changes
+    document.getElementById('groom_photo')?.addEventListener('input', () => syncImageParams('groom_photo', 'groom_photo_preview'));
+    document.getElementById('bride_photo')?.addEventListener('input', () => syncImageParams('bride_photo', 'bride_photo_preview'));
+    document.getElementById('hero_bg')?.addEventListener('input', () => syncImageParams('hero_bg', 'hero_bg_preview'));
 
     // Handle image file uploads to Supabase Storage via backend upload API
     const handleFileUpload = async (fileInputId, textInputId) => {
@@ -1396,11 +1765,20 @@ const activeSettingsUrls = new Set([
                 const result = await res.json();
                 textInput.value = result.publicUrl;
                 
-                // Update the preview immediately
+                // Update preview immediately
                 const previewId = textInputId + '_preview';
-                updatePreview(textInputId, previewId);
+                syncImageParams(textInputId, previewId);
 
-                triggerAdminToast("Berkas foto berhasil diunggah! Klik Simpan di bawah untuk menyimpan.");
+                triggerAdminToast("Berkas foto berhasil diunggah! Membuka editor posisi...");
+
+                // Auto-open cropper modal for the newly uploaded file
+                const isRound = textInputId !== 'hero_bg';
+                const titleText = textInputId === 'groom_photo' ? 'Sesuaikan Foto Mempelai Pria' : 
+                                  (textInputId === 'bride_photo' ? 'Sesuaikan Foto Mempelai Wanita' : 'Sesuaikan Background Hero');
+                
+                setTimeout(() => {
+                    openCropperModal(textInputId, previewId, titleText, isRound);
+                }, 400);
             } else {
                 const err = await res.json();
                 alert("Gagal mengunggah: " + (err.error || "Kesalahan server"));

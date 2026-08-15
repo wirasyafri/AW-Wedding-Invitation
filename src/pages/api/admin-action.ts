@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase.server';
 
 // POST api/admin-action: Handle comment toggle and delete
 export const POST: APIRoute = async ({ request }) => {

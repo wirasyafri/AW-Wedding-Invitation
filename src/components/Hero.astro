@@ -1,9 +1,35 @@
 ---
 const { settings } = Astro.props;
+const heroBg = settings.hero_bg || '';
+
+// Retrieve position parameter
+function getUrlPosition(url) {
+    if (!url) return 'center';
+    try {
+        const match = url.match(/[\?&]pos=([^&]+)/);
+        return match ? decodeURIComponent(match[1]).replace('_', ' ') : 'center';
+    } catch (e) {
+        return 'center';
+    }
+}
+
+// Retrieve zoom parameter
+function getUrlZoom(url) {
+    if (!url) return '1';
+    try {
+        const match = url.match(/[\?&]zoom=([^&]+)/);
+        return match ? decodeURIComponent(match[1]) : '1';
+    } catch (e) {
+        return '1';
+    }
+}
+
+const bgPosition = getUrlPosition(heroBg);
+const bgZoom = getUrlZoom(heroBg);
 ---
 <section class="relative min-h-screen flex items-center justify-center text-center px-4 overflow-hidden">
     <!-- Background Image overlay -->
-    <div class="absolute inset-0 bg-cover bg-center animate-kenburns" style={`background-image: url('${settings.hero_bg}');`}></div>
+    <div class="absolute inset-0 bg-cover animate-kenburns" style={`background-image: url('${heroBg}'); background-position: ${bgPosition}; --bg-zoom: ${bgZoom}; transform-origin: ${bgPosition};`}></div>
     <div class="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/70 to-stone-950/40"></div>
     
     <div class="relative z-10 max-w-3xl mx-auto py-20 text-stone-100 reveal">
