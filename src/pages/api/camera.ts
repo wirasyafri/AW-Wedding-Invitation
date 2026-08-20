@@ -118,7 +118,8 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   const fileExt = file.name.split('.').pop() || 'jpg';
-  const filePath = `${guest}/${Date.now()}.${fileExt}`;
+  const randomSuffix = Math.random().toString(36).substring(2, 9);
+  const filePath = `${guest}/${Date.now()}_${randomSuffix}.${fileExt}`;
   const { error: uploadError, data: uploadData } = await supabase.storage
     .from('disposable-camera')
     .upload(filePath, file, { upsert: false, contentType: file.type });
