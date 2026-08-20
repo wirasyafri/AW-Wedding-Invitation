@@ -77,7 +77,10 @@ export const POST: APIRoute = async ({ request }) => {
       }
     }
 
-    // 2. Upload the new audio file
+    // 2. Convert File object to ArrayBuffer and then Node Buffer for robust serverless upload
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
     const fileExt = file.name.split('.').pop() || 'webm';
     // Sanitize guest name for file path
     const sanitizedGuest = guest.replace(/[^a-zA-Z0-9-_]/g, '_');
@@ -85,7 +88,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     const { error: uploadError } = await supabase.storage
       .from('disposable-camera')
-      .upload(filePath, file, { 
+      .upload(filePath, buffer, { 
         upsert: true, 
         contentType: file.type || 'audio/webm' 
       });

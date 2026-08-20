@@ -117,12 +117,16 @@ export const POST: APIRoute = async ({ request }) => {
     });
   }
 
+  // Convert File object to ArrayBuffer and then Node Buffer for robust serverless upload
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+
   const fileExt = file.name.split('.').pop() || 'jpg';
   const randomSuffix = Math.random().toString(36).substring(2, 9);
   const filePath = `${guest}/${Date.now()}_${randomSuffix}.${fileExt}`;
   const { error: uploadError, data: uploadData } = await supabase.storage
     .from('disposable-camera')
-    .upload(filePath, file, { upsert: false, contentType: file.type });
+    .upload(filePath, buffer, { upsert: false, contentType: file.type });
   if (uploadError) {
     return new Response(JSON.stringify({ error: uploadError.message }), {
       status: 500,
