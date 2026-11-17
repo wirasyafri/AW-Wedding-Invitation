@@ -30,33 +30,35 @@ const groomZoom = getUrlZoom(groomPhoto);
 const bridePos = getUrlPosition(bridePhoto);
 const brideZoom = getUrlZoom(bridePhoto);
 ---
-<section class="py-24 px-4 bg-stone-900 text-stone-100 relative">
-    <div class="max-w-5xl mx-auto text-center">
-        <span class="font-cinzel uppercase tracking-[0.3em] text-xs text-gold block mb-2">Mempelai Bahagia</span>
-        <h2 class="font-script text-5xl md:text-6xl text-gold-light mb-16">The Groom & Bride</h2>
+<section class="py-24 px-4 bg-[#95a371] relative overflow-hidden" style="background: radial-gradient(circle at center, #9fae7c 0%, #95a371 60%, #83905f 100%);">
+    <div class="max-w-5xl mx-auto text-center relative z-10">
+        <span class="font-cinzel uppercase tracking-[0.3em] text-xs text-[#453008] font-bold block mb-3">Mempelai Bahagia</span>
+        <h2 class="font-script text-5xl md:text-6xl text-[#4a3206] mb-2 leading-normal py-1 overflow-visible">The Groom & Bride</h2>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <!-- Groom -->
-            <div class="bg-stone-950/80 p-8 rounded-2xl border border-gold/30 shadow-2xl relative group reveal">
-                <div class="w-48 h-48 mx-auto rounded-full overflow-hidden border-2 border-gold mb-6 shadow-lg hover:scale-105 transition duration-500">
+            <div class="bg-white/95 backdrop-blur-sm p-8 md:p-10 rounded-3xl border border-[#bfa254]/50 shadow-xl relative group reveal hover:shadow-2xl transition duration-300">
+                <div class="w-48 h-48 mx-auto rounded-full overflow-hidden border-2 border-gold mb-6 shadow-md hover:scale-105 transition duration-500">
                     <img src={groomPhoto} alt={settings.groom_name_short} class="w-full h-full object-cover" style={`object-position: ${groomPos}; transform: scale(${groomZoom}); transform-origin: ${groomPos};`} />
                 </div>
-                <h3 class="font-cinzel font-bold text-2xl text-gold mb-2">{settings.groom_name_full}</h3>
-                <p class="text-stone-400 text-sm mb-4">Putra Kedua dari<br>{settings.groom_parents}</p>
-                <a href={`https://instagram.com/${settings.groom_instagram}`} target="_blank" class="inline-flex items-center text-xs font-cinzel text-gold border border-gold/40 px-4 py-2 rounded-full hover:bg-gold hover:text-stone-900 transition">
-                    <i class="fa-brands fa-instagram mr-2"></i> @{settings.groom_instagram}
+                <h3 class="font-cinzel font-bold text-2xl text-[#6b470c] mb-2">{settings.groom_name_full}</h3>
+                <div class="w-16 h-0.5 bg-gradient-to-r from-transparent via-[#aa820a] to-transparent mx-auto mb-4"></div>
+                <p class="text-[#7d5d1c] text-sm mb-5 leading-relaxed">Putra Kedua dari<br><span class="font-bold text-[#543909] text-base">{settings.groom_parents}</span></p>
+                <a href={`https://instagram.com/${settings.groom_instagram}`} target="_blank" class="inline-flex items-center text-xs font-cinzel text-[#543909] font-bold border border-[#b89535] bg-gradient-to-r from-[#fcf8eb] via-[#f7eecf] to-[#f4e7c3] px-5 py-2.5 rounded-full hover:bg-gradient-to-r hover:from-gold-light hover:via-gold hover:to-gold-dark hover:text-stone-950 transition duration-300 shadow-sm">
+                    <i class="fa-brands fa-instagram mr-2 text-[#7d5d1c] text-sm"></i> @{settings.groom_instagram}
                 </a>
             </div>
 
             <!-- Bride -->
-            <div class="bg-stone-950/80 p-8 rounded-2xl border border-gold/30 shadow-2xl relative group reveal">
-                <div class="w-48 h-48 mx-auto rounded-full overflow-hidden border-2 border-gold mb-6 shadow-lg hover:scale-105 transition duration-500">
+            <div class="bg-white/95 backdrop-blur-sm p-8 md:p-10 rounded-3xl border border-[#bfa254]/50 shadow-xl relative group reveal hover:shadow-2xl transition duration-300">
+                <div class="w-48 h-48 mx-auto rounded-full overflow-hidden border-2 border-gold mb-6 shadow-md hover:scale-105 transition duration-500">
                     <img src={bridePhoto} alt={settings.bride_name_short} class="w-full h-full object-cover" style={`object-position: ${bridePos}; transform: scale(${brideZoom}); transform-origin: ${bridePos};`} />
                 </div>
-                <h3 class="font-cinzel font-bold text-2xl text-gold mb-2">{settings.bride_name_full}</h3>
-                <p class="text-stone-400 text-sm mb-4">Putri Pertama dari<br>{settings.bride_parents}</p>
-                <a href={`https://instagram.com/${settings.bride_instagram}`} target="_blank" class="inline-flex items-center text-xs font-cinzel text-gold border border-gold/40 px-4 py-2 rounded-full hover:bg-gold hover:text-stone-900 transition">
-                    <i class="fa-brands fa-instagram mr-2"></i> @{settings.bride_instagram}
+                <h3 class="font-cinzel font-bold text-2xl text-[#6b470c] mb-2">{settings.bride_name_full}</h3>
+                <div class="w-16 h-0.5 bg-gradient-to-r from-transparent via-[#aa820a] to-transparent mx-auto mb-4"></div>
+                <p class="text-[#7d5d1c] text-sm mb-5 leading-relaxed">Putri Pertama dari<br><span class="font-bold text-[#543909] text-base">{settings.bride_parents}</span></p>
+                <a href={`https://instagram.com/${settings.bride_instagram}`} target="_blank" class="inline-flex items-center text-xs font-cinzel text-[#543909] font-bold border border-[#b89535] bg-gradient-to-r from-[#fcf8eb] via-[#f7eecf] to-[#f4e7c3] px-5 py-2.5 rounded-full hover:bg-gradient-to-r hover:from-gold-light hover:via-gold hover:to-gold-dark hover:text-stone-950 transition duration-300 shadow-sm">
+                    <i class="fa-brands fa-instagram mr-2 text-[#7d5d1c] text-sm"></i> @{settings.bride_instagram}
                 </a>
             </div>
         </div>

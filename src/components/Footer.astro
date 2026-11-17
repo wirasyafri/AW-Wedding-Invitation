@@ -1,11 +1,11 @@
 ---
 const { settings } = Astro.props;
 ---
-<footer class="py-12 px-4 bg-stone-950 text-stone-400 text-center border-t border-gold/20">
-    <div class="max-w-lg mx-auto reveal">
-        <h2 class="font-script text-4xl text-gold-light mb-4">{settings.groom_name_short} & {settings.bride_name_short}</h2>
-        <p class="font-cinzel text-xs uppercase tracking-widest text-stone-300 mb-6">Terima Kasih atas Kehadiran & Doa Restu Anda</p>
-        <div class="w-16 h-[1px] bg-gold/30 mx-auto mb-6"></div>
-        <p class="text-[11px] text-stone-500"> Designed by {settings.bride_name_short} & {settings.groom_name_short} (and a little help from our sugar gliders & hamsters 🐾)</p>
+<footer class="py-14 px-4 bg-[#95a371] text-center border-t border-[#bfa254]/40 relative overflow-hidden" style="background: radial-gradient(circle at center, #9fae7c 0%, #95a371 60%, #83905f 100%);">
+    <div class="max-w-lg mx-auto reveal relative z-10">
+        <h2 class="font-script text-4xl md:text-5xl text-[#4a3206] mb-3 leading-normal py-1 overflow-visible">{settings.groom_name_short} & {settings.bride_name_short}</h2>
+        <p class="font-cinzel text-xs uppercase tracking-widest text-[#453008] font-bold mb-6">Terima Kasih atas Kehadiran & Doa Restu Anda</p>
+        <div class="w-20 h-[1.5px] bg-gradient-to-r from-transparent via-[#bfa254] to-transparent mx-auto mb-6"></div>
+        <p class="text-[11px] text-[#453008]/85 font-medium"> Designed by {settings.bride_name_short} & {settings.groom_name_short} (and a little help from our sugar gliders & hamsters 🐾)</p>
     </div>
 </footer>

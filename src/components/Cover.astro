@@ -2,31 +2,299 @@
 const { settings } = Astro.props;
 ---
 
-<div id="invitation-cover" class="fixed inset-0 z-50 flex items-center justify-center royal-bg px-4 transition-opacity duration-1000">
-    <div class="absolute inset-0 opacity-20 bg-[radial-gradient(var(--color-gold)_1px,transparent_1px)] [background-size:24px_24px]"></div>
+<div id="invitation-cover" class="fixed inset-0 z-50 flex items-center justify-center bg-[#FAF8F5] px-4 transition-opacity duration-1000" style="background: radial-gradient(circle at center, #FDFCF9 0%, #F5F3EC 60%, #EAE6DC 100%);">
+    <div class="absolute inset-0 opacity-25 bg-[radial-gradient(#bfa254_1px,transparent_1px)] [background-size:24px_24px]"></div>
     
     <!-- Animated background for hamsters & sugar gliders -->
     <canvas id="cover-pets-canvas" class="absolute inset-0 w-full h-full pointer-events-none z-20"></canvas>
     
-    <div class="relative z-10 max-w-lg w-full bg-stone-900/90 border-2 border-gold/40 rounded-2xl p-8 md:p-12 text-center shadow-2xl backdrop-blur-md">
-        <!-- Decorative Crown / Palace Icon -->
-        <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gold/10 border border-gold/30 mb-6 text-gold text-3xl animate-float">
-            <i class="fa-solid fa-crown"></i>
+    <div class="relative z-10 max-w-lg w-full bg-[#95a371]/95 border-2 border-[#bfa254]/70 rounded-2xl p-8 md:p-12 text-center shadow-2xl backdrop-blur-md" style="background: radial-gradient(circle at 50% 30%, #a4b380 0%, #95a371 60%, #82915e 100%);">
+        <!-- Sakura Flower Frame Decorations -->
+        <!-- Shared SVG Definitions for Sakura Flowers & Leaves -->
+        <svg class="absolute w-0 h-0 pointer-events-none overflow-hidden" aria-hidden="true" focusable="false">
+            <defs>
+                <!-- Gradients for Sakura Blossom Petals -->
+                <linearGradient id="sakuraPetalGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#FFF7F9" />
+                    <stop offset="40%" stop-color="#FFCCD7" />
+                    <stop offset="80%" stop-color="#FF9EAA" />
+                    <stop offset="100%" stop-color="#FF6B8B" />
+                </linearGradient>
+                <linearGradient id="sakuraPetalBackGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#FFE0E6" />
+                    <stop offset="60%" stop-color="#FFA8B8" />
+                    <stop offset="100%" stop-color="#F05375" />
+                </linearGradient>
+                <!-- Deep Crimson to Pink Core Gradient -->
+                <radialGradient id="sakuraCoreGrad" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="#9E0024" />
+                    <stop offset="35%" stop-color="#D90429" />
+                    <stop offset="70%" stop-color="#FF5A79" stop-opacity="0.9" />
+                    <stop offset="100%" stop-color="#FFCCD7" stop-opacity="0" />
+                </radialGradient>
+                <!-- Royal Gold for Pistil & Anther Tips -->
+                <linearGradient id="sakuraGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#FFF3B0" />
+                    <stop offset="50%" stop-color="#D4AF37" />
+                    <stop offset="100%" stop-color="#996515" />
+                </linearGradient>
+                <!-- Leaves Gradient -->
+                <linearGradient id="sakuraLeafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#A7D489" />
+                    <stop offset="55%" stop-color="#559966" />
+                    <stop offset="100%" stop-color="#286343" />
+                </linearGradient>
+                <!-- Branch Wood Gradient -->
+                <linearGradient id="sakuraWoodGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#8C5946" />
+                    <stop offset="50%" stop-color="#5C392C" />
+                    <stop offset="100%" stop-color="#382017" />
+                </linearGradient>
+                <!-- Soft Drop Shadow Filter for Realistic Layering Over Gold Frame -->
+                <filter id="sakuraShadow" x="-30%" y="-30%" width="160%" height="160%">
+                    <feDropShadow dx="0" dy="2.5" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.55"/>
+                </filter>
+
+                <!-- Single Sakura Petal with Characteristic Heart Notch -->
+                <g id="sakura-petal">
+                    <path d="M 0,0 C -7,-12 -13,-24 -10,-34 C -8,-39 -3,-38 0,-33 L 0,-31 L 0,-33 C 3,-38 8,-39 10,-34 C 13,-24 7,-12 0,0 Z" fill="url(#sakuraPetalGrad)" />
+                    <path d="M 0,-3 L 0,-22" stroke="#FF758F" stroke-width="0.6" stroke-linecap="round" opacity="0.6" />
+                </g>
+
+                <!-- Fully Bloomed 5-Petal Sakura Blossom (Large) -->
+                <g id="sakura-flower-lg" filter="url(#sakuraShadow)">
+                    <path d="M 0,0 C -7,-12 -13,-24 -10,-34 C -8,-39 -3,-38 0,-33 L 0,-31 L 0,-33 C 3,-38 8,-39 10,-34 C 13,-24 7,-12 0,0 Z" fill="url(#sakuraPetalGrad)" transform="rotate(0)" />
+                    <path d="M 0,0 C -7,-12 -13,-24 -10,-34 C -8,-39 -3,-38 0,-33 L 0,-31 L 0,-33 C 3,-38 8,-39 10,-34 C 13,-24 7,-12 0,0 Z" fill="url(#sakuraPetalGrad)" transform="rotate(72)" />
+                    <path d="M 0,0 C -7,-12 -13,-24 -10,-34 C -8,-39 -3,-38 0,-33 L 0,-31 L 0,-33 C 3,-38 8,-39 10,-34 C 13,-24 7,-12 0,0 Z" fill="url(#sakuraPetalGrad)" transform="rotate(144)" />
+                    <path d="M 0,0 C -7,-12 -13,-24 -10,-34 C -8,-39 -3,-38 0,-33 L 0,-31 L 0,-33 C 3,-38 8,-39 10,-34 C 13,-24 7,-12 0,0 Z" fill="url(#sakuraPetalGrad)" transform="rotate(216)" />
+                    <path d="M 0,0 C -7,-12 -13,-24 -10,-34 C -8,-39 -3,-38 0,-33 L 0,-31 L 0,-33 C 3,-38 8,-39 10,-34 C 13,-24 7,-12 0,0 Z" fill="url(#sakuraPetalGrad)" transform="rotate(288)" />
+                    
+                    <!-- Center Core Blush -->
+                    <circle cx="0" cy="0" r="13" fill="url(#sakuraCoreGrad)" />
+                    
+                    <!-- Radiating Stamens & Golden Anthers -->
+                    <g stroke="#B81438" stroke-width="0.8" opacity="0.9">
+                        <line x1="0" y1="0" x2="0" y2="-12" />
+                        <line x1="0" y1="0" x2="7" y2="-10" />
+                        <line x1="0" y1="0" x2="11" y2="-4" />
+                        <line x1="0" y1="0" x2="11" y2="4" />
+                        <line x1="0" y1="0" x2="7" y2="10" />
+                        <line x1="0" y1="0" x2="0" y2="12" />
+                        <line x1="0" y1="0" x2="-7" y2="10" />
+                        <line x1="0" y1="0" x2="-11" y2="4" />
+                        <line x1="0" y1="0" x2="-11" y2="-4" />
+                        <line x1="0" y1="0" x2="-7" y2="-10" />
+                    </g>
+                    <!-- Golden Anthers -->
+                    <circle cx="0" cy="-12" r="1.3" fill="url(#sakuraGoldGrad)" />
+                    <circle cx="7" cy="-10" r="1.3" fill="url(#sakuraGoldGrad)" />
+                    <circle cx="11" cy="-4" r="1.3" fill="url(#sakuraGoldGrad)" />
+                    <circle cx="11" cy="4" r="1.3" fill="url(#sakuraGoldGrad)" />
+                    <circle cx="7" cy="10" r="1.3" fill="url(#sakuraGoldGrad)" />
+                    <circle cx="0" cy="12" r="1.3" fill="url(#sakuraGoldGrad)" />
+                    <circle cx="-7" cy="10" r="1.3" fill="url(#sakuraGoldGrad)" />
+                    <circle cx="-11" cy="4" r="1.3" fill="url(#sakuraGoldGrad)" />
+                    <circle cx="-11" cy="-4" r="1.3" fill="url(#sakuraGoldGrad)" />
+                    <circle cx="-7" cy="-10" r="1.3" fill="url(#sakuraGoldGrad)" />
+
+                    <!-- Center Pistil Eye -->
+                    <circle cx="0" cy="0" r="2.6" fill="#FFF5F7" stroke="#FF5A79" stroke-width="0.6" />
+                </g>
+
+                <!-- Medium Sakura Blossom -->
+                <g id="sakura-flower-md">
+                    <use href="#sakura-flower-lg" transform="scale(0.75)" />
+                </g>
+
+                <!-- Small Sakura Blossom -->
+                <g id="sakura-flower-sm">
+                    <use href="#sakura-flower-lg" transform="scale(0.55)" />
+                </g>
+
+                <!-- Side-Angle Sakura Blossom Profile with Green Calyx -->
+                <g id="sakura-flower-side" filter="url(#sakuraShadow)">
+                    <!-- Green Sepals / Calyx Base -->
+                    <path d="M -8,8 C -5,2 -2,0 0,-2 C 2,0 5,2 8,8 C 4,5 0,4 -8,8 Z" fill="url(#sakuraLeafGrad)" />
+                    <!-- Petals Fanning Forward -->
+                    <path d="M 0,-2 C -12,-8 -18,-18 -14,-26 C -11,-29 -6,-28 -3,-24 L 0,-22 L 3,-24 C 6,-28 11,-29 14,-26 C 18,-18 12,-8 0,-2 Z" fill="url(#sakuraPetalGrad)" />
+                    <path d="M 0,-2 C -16,-2 -22,-10 -20,-18 C -18,-22 -12,-22 -9,-17 L -6,-15 L -4,-18 C -1,-22 5,-22 8,-18 C 10,-10 6,-2 0,-2 Z" fill="url(#sakuraPetalBackGrad)" transform="rotate(-30)" opacity="0.9" />
+                    <path d="M 0,-2 C -6,-2 -10,-10 -8,-18 C -5,-22 1,-22 4,-18 L 6,-15 L 9,-17 C 12,-22 18,-22 20,-18 C 22,-10 16,-2 0,-2 Z" fill="url(#sakuraPetalBackGrad)" transform="rotate(30)" opacity="0.9" />
+                    <circle cx="0" cy="-6" r="4" fill="url(#sakuraCoreGrad)" />
+                    <circle cx="-3" cy="-10" r="1.2" fill="url(#sakuraGoldGrad)" />
+                    <circle cx="0" cy="-12" r="1.2" fill="url(#sakuraGoldGrad)" />
+                    <circle cx="3" cy="-10" r="1.2" fill="url(#sakuraGoldGrad)" />
+                </g>
+
+                <!-- Unopened Sakura Rosebud -->
+                <g id="sakura-bud" filter="url(#sakuraShadow)">
+                    <!-- Calyx -->
+                    <path d="M 0,0 C -4,-4 -5,-10 -2,-14 C 2,-10 4,-4 0,0 Z" fill="url(#sakuraLeafGrad)" />
+                    <path d="M 0,0 C 4,-4 5,-10 2,-14 C -2,-10 -4,-4 0,0 Z" fill="url(#sakuraLeafGrad)" />
+                    <!-- Emerging Pink Tip -->
+                    <path d="M -1,-10 C -2,-16 0,-20 2,-20 C 4,-20 6,-16 5,-10 Z" fill="url(#sakuraPetalGrad)" />
+                </g>
+
+                <!-- Graceful Sakura Leaf with Gold-Green Vein -->
+                <g id="sakura-leaf" filter="url(#sakuraShadow)">
+                    <path d="M 0,0 C -7,-9 -9,-20 0,-28 C 9,-20 7,-9 0,0 Z" fill="url(#sakuraLeafGrad)" />
+                    <path d="M 0,-2 L 0,-26" stroke="#FFF275" stroke-width="0.6" stroke-linecap="round" opacity="0.45" />
+                </g>
+            </defs>
+        </svg>
+
+        <!-- Top-Left Corner Sakura Garland -->
+        <svg class="absolute -top-6 -left-6 sm:-top-8 sm:-left-8 w-28 h-28 sm:w-36 sm:h-36 md:w-40 md:h-40 pointer-events-none z-20 sakura-sway-tl" viewBox="0 0 130 130" fill="none">
+            <!-- Intertwining Golden-Brown Cherry Branches -->
+            <path d="M 10,40 Q 38,42 62,65 T 96,86" stroke="url(#sakuraWoodGrad)" stroke-width="4.5" stroke-linecap="round" />
+            <path d="M 38,42 Q 60,30 84,33" stroke="url(#sakuraWoodGrad)" stroke-width="3" stroke-linecap="round" />
+            <path d="M 62,64 Q 50,88 42,104" stroke="url(#sakuraWoodGrad)" stroke-width="2.6" stroke-linecap="round" />
+            
+            <!-- Delicate Leaves -->
+            <use href="#sakura-leaf" transform="translate(86, 32) rotate(40) scale(0.9)" />
+            <use href="#sakura-leaf" transform="translate(62, 28) rotate(-25) scale(0.8)" />
+            <use href="#sakura-leaf" transform="translate(42, 105) rotate(135) scale(0.85)" />
+            <use href="#sakura-leaf" transform="translate(98, 88) rotate(55) scale(0.75)" />
+
+            <!-- Buds -->
+            <use href="#sakura-bud" transform="translate(90, 30) rotate(50) scale(0.85)" />
+            <use href="#sakura-bud" transform="translate(38, 108) rotate(145) scale(0.8)" />
+
+            <!-- Blossoms -->
+            <use href="#sakura-flower-lg" transform="translate(54, 54) rotate(18)" />
+            <use href="#sakura-flower-md" transform="translate(28, 30) rotate(-32)" />
+            <use href="#sakura-flower-side" transform="translate(88, 70) rotate(25)" />
+            <use href="#sakura-flower-sm" transform="translate(68, 88) rotate(45)" />
+
+            <!-- Floating Petals Drifting Off Branch -->
+            <use href="#sakura-petal" transform="translate(112, 45) rotate(55) scale(0.85)" />
+            <use href="#sakura-petal" transform="translate(52, 115) rotate(-15) scale(0.75)" />
+        </svg>
+
+        <!-- Top-Right Corner Sakura Garland -->
+        <svg class="absolute -top-6 -right-6 sm:-top-8 sm:-right-8 w-28 h-28 sm:w-36 sm:h-36 md:w-40 md:h-40 pointer-events-none z-20 sakura-sway-tr" viewBox="0 0 130 130" fill="none">
+            <!-- Intertwining Golden-Brown Cherry Branches -->
+            <path d="M 120,40 Q 92,42 68,65 T 34,86" stroke="url(#sakuraWoodGrad)" stroke-width="4.5" stroke-linecap="round" />
+            <path d="M 92,42 Q 70,30 46,33" stroke="url(#sakuraWoodGrad)" stroke-width="3" stroke-linecap="round" />
+            <path d="M 68,64 Q 80,88 88,104" stroke="url(#sakuraWoodGrad)" stroke-width="2.6" stroke-linecap="round" />
+
+            <!-- Delicate Leaves -->
+            <use href="#sakura-leaf" transform="translate(44, 32) rotate(-40) scale(0.9)" />
+            <use href="#sakura-leaf" transform="translate(68, 28) rotate(25) scale(0.8)" />
+            <use href="#sakura-leaf" transform="translate(88, 105) rotate(-135) scale(0.85)" />
+            <use href="#sakura-leaf" transform="translate(32, 88) rotate(-55) scale(0.75)" />
+
+            <!-- Buds -->
+            <use href="#sakura-bud" transform="translate(40, 30) rotate(-50) scale(0.85)" />
+            <use href="#sakura-bud" transform="translate(92, 108) rotate(-145) scale(0.8)" />
+
+            <!-- Blossoms -->
+            <use href="#sakura-flower-lg" transform="translate(76, 54) rotate(-18)" />
+            <use href="#sakura-flower-md" transform="translate(102, 30) rotate(32)" />
+            <use href="#sakura-flower-side" transform="translate(42, 70) rotate(-25)" />
+            <use href="#sakura-flower-sm" transform="translate(62, 88) rotate(-45)" />
+
+            <!-- Floating Petals Drifting Off Branch -->
+            <use href="#sakura-petal" transform="translate(18, 45) rotate(-55) scale(0.85)" />
+            <use href="#sakura-petal" transform="translate(78, 115) rotate(15) scale(0.75)" />
+        </svg>
+
+        <!-- Bottom-Left Corner Sakura Garland -->
+        <svg class="absolute -bottom-6 -left-6 sm:-bottom-8 sm:-left-8 w-26 h-26 sm:w-34 sm:h-34 md:w-38 md:h-38 pointer-events-none z-20 sakura-sway-bl" viewBox="0 0 130 130" fill="none">
+            <!-- Intertwining Golden-Brown Cherry Branches -->
+            <path d="M 12,90 Q 40,88 64,65 T 96,44" stroke="url(#sakuraWoodGrad)" stroke-width="4.2" stroke-linecap="round" />
+            <path d="M 40,88 Q 62,100 86,96" stroke="url(#sakuraWoodGrad)" stroke-width="2.8" stroke-linecap="round" />
+            <path d="M 64,66 Q 48,40 40,24" stroke="url(#sakuraWoodGrad)" stroke-width="2.5" stroke-linecap="round" />
+
+            <!-- Delicate Leaves -->
+            <use href="#sakura-leaf" transform="translate(86, 96) rotate(115) scale(0.85)" />
+            <use href="#sakura-leaf" transform="translate(40, 22) rotate(-20) scale(0.8)" />
+            <use href="#sakura-leaf" transform="translate(98, 42) rotate(45) scale(0.75)" />
+
+            <!-- Buds -->
+            <use href="#sakura-bud" transform="translate(38, 18) rotate(-30) scale(0.8)" />
+            <use href="#sakura-bud" transform="translate(90, 98) rotate(120) scale(0.8)" />
+
+            <!-- Blossoms -->
+            <use href="#sakura-flower-lg" transform="translate(56, 76) rotate(42)" />
+            <use href="#sakura-flower-md" transform="translate(84, 56) rotate(-15)" />
+            <use href="#sakura-flower-side" transform="translate(34, 46) rotate(60)" />
+
+            <!-- Floating Petals -->
+            <use href="#sakura-petal" transform="translate(108, 75) rotate(35) scale(0.8)" />
+            <use href="#sakura-petal" transform="translate(58, 18) rotate(-70) scale(0.75)" />
+        </svg>
+
+        <!-- Bottom-Right Corner Sakura Garland -->
+        <svg class="absolute -bottom-6 -right-6 sm:-bottom-8 sm:-right-8 w-26 h-26 sm:w-34 sm:h-34 md:w-38 md:h-38 pointer-events-none z-20 sakura-sway-br" viewBox="0 0 130 130" fill="none">
+            <!-- Intertwining Golden-Brown Cherry Branches -->
+            <path d="M 118,90 Q 90,88 66,65 T 34,44" stroke="url(#sakuraWoodGrad)" stroke-width="4.2" stroke-linecap="round" />
+            <path d="M 90,88 Q 68,100 44,96" stroke="url(#sakuraWoodGrad)" stroke-width="2.8" stroke-linecap="round" />
+            <path d="M 66,66 Q 82,40 90,24" stroke="url(#sakuraWoodGrad)" stroke-width="2.5" stroke-linecap="round" />
+
+            <!-- Delicate Leaves -->
+            <use href="#sakura-leaf" transform="translate(44, 96) rotate(-115) scale(0.85)" />
+            <use href="#sakura-leaf" transform="translate(90, 22) rotate(20) scale(0.8)" />
+            <use href="#sakura-leaf" transform="translate(32, 42) rotate(-45) scale(0.75)" />
+
+            <!-- Buds -->
+            <use href="#sakura-bud" transform="translate(92, 18) rotate(30) scale(0.8)" />
+            <use href="#sakura-bud" transform="translate(40, 98) rotate(-120) scale(0.8)" />
+
+            <!-- Blossoms -->
+            <use href="#sakura-flower-lg" transform="translate(74, 76) rotate(-42)" />
+            <use href="#sakura-flower-md" transform="translate(46, 56) rotate(15)" />
+            <use href="#sakura-flower-side" transform="translate(96, 46) rotate(-60)" />
+
+            <!-- Floating Petals -->
+            <use href="#sakura-petal" transform="translate(22, 75) rotate(-35) scale(0.8)" />
+            <use href="#sakura-petal" transform="translate(72, 18) rotate(70) scale(0.75)" />
+        </svg>
+
+        <!-- Scattered Floating Petals Along Frame Borders -->
+        <svg class="absolute -top-3 left-1/4 w-5 h-5 pointer-events-none opacity-85 sakura-petal-float z-20" style="animation-delay: 0.4s;" viewBox="-15 -38 30 42">
+            <use href="#sakura-petal" transform="rotate(22) scale(0.85)" />
+        </svg>
+        <svg class="absolute -top-3.5 right-1/4 w-5 h-5 pointer-events-none opacity-80 sakura-petal-float z-20" style="animation-delay: 1.7s;" viewBox="-15 -38 30 42">
+            <use href="#sakura-petal" transform="rotate(-30) scale(0.8)" />
+        </svg>
+        <svg class="absolute -bottom-3 left-1/3 w-4.5 h-4.5 pointer-events-none opacity-80 sakura-petal-float z-20" style="animation-delay: 2.2s;" viewBox="-15 -38 30 42">
+            <use href="#sakura-petal" transform="rotate(65) scale(0.75)" />
+        </svg>
+        <svg class="absolute -bottom-3.5 right-1/3 w-5 h-5 pointer-events-none opacity-85 sakura-petal-float z-20" style="animation-delay: 1.1s;" viewBox="-15 -38 30 42">
+            <use href="#sakura-petal" transform="rotate(-45) scale(0.8)" />
+        </svg>
+        <svg class="absolute top-1/2 -left-3.5 w-5 h-5 pointer-events-none opacity-80 sakura-petal-float z-20" style="animation-delay: 2.9s;" viewBox="-15 -38 30 42">
+            <use href="#sakura-petal" transform="rotate(18) scale(0.8)" />
+        </svg>
+        <svg class="absolute top-2/5 -right-3.5 w-5 h-5 pointer-events-none opacity-85 sakura-petal-float z-20" style="animation-delay: 0.8s;" viewBox="-15 -38 30 42">
+            <use href="#sakura-petal" transform="rotate(-22) scale(0.85)" />
+        </svg>
+
+        <!-- Decorative Wedding Rings Icon -->
+        <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-white/35 border border-[#bfa254]/60 mb-6 text-[#4a3206] animate-float shadow-lg shadow-black/5">
+            <svg class="w-11 h-11 text-[#4a3206]" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <!-- Diamond Gemstone on Top -->
+                <polygon points="18.6,7 29.4,7 32,11.8 27.6,17.2 20.4,17.2 16,11.8" />
+                <!-- Left Wedding Ring (Solid Circle) -->
+                <circle cx="24" cy="34.2" r="17" />
+                <!-- Right Wedding Ring (Interlocking Band with Gap) -->
+                <path d="M 44.2,23.8 A 16.8 16.8 0 1 1 33.8,25.2" />
+            </svg>
         </div>
         
-        <p class="font-cinzel tracking-[0.3em] text-xs uppercase text-gold/80 mb-3">The Wedding Invitation</p>
-        <h1 class="font-script text-5xl md:text-6xl text-gold-light mb-4">{settings.groom_name_short} & {settings.bride_name_short}</h1>
+        <p class="font-cinzel tracking-[0.3em] text-xs uppercase text-[#453008] font-bold mb-3">The Wedding Invitation</p>
+        <h1 class="font-script text-5xl md:text-6xl text-[#4a3206] mb-4 drop-shadow-sm leading-normal py-1 overflow-visible">{settings.groom_name_short} & {settings.bride_name_short}</h1>
         
-        <div class="w-24 h-[1px] bg-gradient-to-r from-transparent via-gold to-transparent mx-auto my-6"></div>
+        <div class="w-24 h-[1.5px] bg-gradient-to-r from-transparent via-[#bfa254] to-transparent mx-auto my-6"></div>
         
-        <p class="text-stone-300 text-sm font-light mb-2">Kepada Yth. Bapak/Ibu/Saudara/i</p>
-        <div id="guest-name-display" class="font-cinzel font-bold text-lg text-gold mb-8 bg-stone-800/80 py-3 px-6 rounded-lg border border-gold/20 inline-block w-full">
+        <p class="text-[#382504] text-sm font-semibold mb-2">Kepada Yth. Bapak/Ibu/Saudara/i</p>
+        <div id="guest-name-display" class="font-cinzel font-bold text-lg text-[#3e2905] mb-8 bg-white/40 py-3.5 px-6 rounded-xl border border-[#bfa254]/60 backdrop-blur-sm shadow-inner inline-block w-full">
             Tamu Undangan Kehormatan
         </div>
 
-        <button id="open-invitation-btn" class="group relative inline-flex items-center justify-center px-8 py-4 font-cinzel text-sm uppercase tracking-widest text-stone-900 font-bold overflow-hidden rounded-full bg-gradient-to-r from-gold-light via-gold to-gold-dark shadow-lg transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer">
-            <span class="absolute inset-0 w-full h-full bg-white/20 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
-            <i class="fa-solid fa-envelope-open mr-3"></i> Buka Undangan
+        <button id="open-invitation-btn" class="group relative inline-flex items-center justify-center px-8 py-4 font-cinzel text-sm uppercase tracking-widest text-[#2a1b03] font-bold overflow-hidden rounded-full bg-gradient-to-r from-[#fae8b2] via-[#e5c068] to-[#b38827] border border-[#d8b24a] shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer">
+            <span class="absolute inset-0 w-full h-full bg-white/25 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
+            <i class="fa-solid fa-envelope-open mr-3 text-[#3d2705]"></i> Buka Undangan
         </button>
     </div>
 </div>
@@ -110,6 +378,11 @@ const { settings } = Astro.props;
                 ctx.save();
                 ctx.translate(x, y);
                 ctx.scale(direction, 1); // Flip based on direction
+                
+                // Subtle shadow for depth on warm soft white background
+                ctx.shadowColor = 'rgba(80, 65, 45, 0.16)';
+                ctx.shadowBlur = 6;
+                ctx.shadowOffsetY = 2;
                 
                 // Body (winter white grey)
                 ctx.beginPath();
@@ -515,3 +788,47 @@ const { settings } = Astro.props;
         }
     }
 </script>
+
+<style>
+    @keyframes sakura-gentle-sway {
+        0%, 100% {
+            transform: rotate(0deg);
+        }
+        50% {
+            transform: rotate(2deg) scale(1.01);
+        }
+    }
+
+    @keyframes sakura-petal-drift {
+        0%, 100% {
+            transform: translateY(0px) rotate(0deg);
+        }
+        50% {
+            transform: translateY(-4px) rotate(6deg);
+        }
+    }
+
+    .sakura-sway-tl {
+        transform-origin: top left;
+        animation: sakura-gentle-sway 7s ease-in-out infinite;
+    }
+
+    .sakura-sway-tr {
+        transform-origin: top right;
+        animation: sakura-gentle-sway 7.5s ease-in-out infinite reverse;
+    }
+
+    .sakura-sway-bl {
+        transform-origin: bottom left;
+        animation: sakura-gentle-sway 6.8s ease-in-out infinite 1s;
+    }
+
+    .sakura-sway-br {
+        transform-origin: bottom right;
+        animation: sakura-gentle-sway 7.2s ease-in-out infinite reverse 1.5s;
+    }
+
+    .sakura-petal-float {
+        animation: sakura-petal-drift 5s ease-in-out infinite;
+    }
+</style>

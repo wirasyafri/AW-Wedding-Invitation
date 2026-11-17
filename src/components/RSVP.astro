@@ -1,30 +1,30 @@
 ---
 const { settings } = Astro.props;
 ---
-<section id="rsvp-section" class="py-24 px-4 bg-stone-900 text-stone-100" data-groom-short={settings?.groom_name_short || 'Wira'} data-bride-short={settings?.bride_name_short || 'Ayu'}>
-    <div class="max-w-3xl mx-auto reveal">
+<section id="rsvp-section" class="py-24 px-4 bg-[#95a371] relative overflow-hidden text-stone-100" style="background: radial-gradient(circle at center, #9fae7c 0%, #95a371 60%, #83905f 100%);" data-groom-short={settings?.groom_name_short || 'Wira'} data-bride-short={settings?.bride_name_short || 'Ayu'}>
+    <div class="max-w-3xl mx-auto reveal relative z-10">
         <div class="text-center mb-12">
-            <span class="font-cinzel uppercase tracking-[0.3em] text-xs text-gold block mb-2">Kehadiran & Doa</span>
-            <h2 class="font-script text-5xl md:text-6xl text-gold-light mb-4">RSVP & Ucapan</h2>
-            <p class="text-stone-400 text-sm">Berikan konfirmasi kehadiran serta doa restu terbaik Anda untuk kedua mempelai.</p>
+            <span class="font-cinzel uppercase tracking-[0.3em] text-xs text-[#453008] font-bold block mb-3">Kehadiran & Doa</span>
+            <h2 class="font-script text-5xl md:text-6xl text-[#4a3206] mb-3 leading-normal py-1 overflow-visible">RSVP & Ucapan</h2>
+            <p class="text-[#453008] text-sm max-w-xl mx-auto font-medium leading-relaxed">Berikan konfirmasi kehadiran serta doa restu terbaik Anda untuk kedua mempelai.</p>
         </div>
 
-        <form id="rsvp-form" class="bg-stone-950/80 p-8 rounded-2xl border border-gold/30 shadow-2xl space-y-6 mb-12">
+        <form id="rsvp-form" class="bg-white/95 backdrop-blur-sm p-8 sm:p-10 rounded-3xl border border-[#bfa254]/50 shadow-xl space-y-6 mb-12 text-stone-800">
             <div>
-                <label class="block font-cinzel text-xs text-gold uppercase tracking-wider mb-2">Nama Lengkap</label>
-                <input type="text" id="rsvp-name" required placeholder="Masukkan nama Anda" class="w-full bg-stone-900 border border-stone-800 rounded-lg px-4 py-3 text-stone-100 focus:outline-none focus:border-gold transition">
+                <label class="block font-cinzel text-xs text-[#6b470c] font-bold uppercase tracking-wider mb-2">Nama Lengkap</label>
+                <input type="text" id="rsvp-name" required placeholder="Masukkan nama Anda" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-4 py-3 text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-[#bfa254] focus:ring-2 focus:ring-[#bfa254]/20 transition">
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label class="block font-cinzel text-xs text-gold uppercase tracking-wider mb-2">Konfirmasi Kehadiran</label>
-                    <select id="rsvp-status" class="w-full bg-stone-900 border border-stone-800 rounded-lg px-4 py-3 text-stone-100 focus:outline-none focus:border-gold transition">
+                    <label class="block font-cinzel text-xs text-[#6b470c] font-bold uppercase tracking-wider mb-2">Konfirmasi Kehadiran</label>
+                    <select id="rsvp-status" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-4 py-3 text-stone-900 focus:outline-none focus:border-[#bfa254] focus:ring-2 focus:ring-[#bfa254]/20 transition cursor-pointer">
                         <option value="Hadir">Hadir (Hadir di Acara)</option>
                         <option value="Berhalangan">Berhalangan Hadir</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block font-cinzel text-xs text-gold uppercase tracking-wider mb-2">Jumlah Tamu</label>
-                    <select id="rsvp-guests" class="w-full bg-stone-900 border border-stone-800 rounded-lg px-4 py-3 text-stone-100 focus:outline-none focus:border-gold transition">
+                    <label class="block font-cinzel text-xs text-[#6b470c] font-bold uppercase tracking-wider mb-2">Jumlah Tamu</label>
+                    <select id="rsvp-guests" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-4 py-3 text-stone-900 focus:outline-none focus:border-[#bfa254] focus:ring-2 focus:ring-[#bfa254]/20 transition cursor-pointer">
                         <option value="1 Orang">1 Orang</option>
                         <option value="2 Orang">2 Orang</option>
                         <option value="Lebih dari 2 Orang">Lebih dari 2 Orang</option>
@@ -32,24 +32,24 @@ const { settings } = Astro.props;
                 </div>
             </div>
             <div>
-                <label class="block font-cinzel text-xs text-gold uppercase tracking-wider mb-2">Ucapan & Doa Restu</label>
-                <textarea id="rsvp-message" rows="4" required placeholder="Tuliskan ucapan atau doa restu..." class="w-full bg-stone-900 border border-stone-800 rounded-lg px-4 py-3 text-stone-100 focus:outline-none focus:border-gold transition"></textarea>
+                <label class="block font-cinzel text-xs text-[#6b470c] font-bold uppercase tracking-wider mb-2">Ucapan & Doa Restu</label>
+                <textarea id="rsvp-message" rows="4" required placeholder="Tuliskan ucapan atau doa restu..." class="w-full bg-stone-50 border border-stone-300 rounded-xl px-4 py-3 text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-[#bfa254] focus:ring-2 focus:ring-[#bfa254]/20 transition"></textarea>
             </div>
             <div class="flex flex-col gap-3">
-                <button type="submit" id="rsvp-submit-btn" class="w-full py-4 font-cinzel text-sm uppercase tracking-widest text-stone-900 font-bold rounded-lg bg-gradient-to-r from-gold-light via-gold to-gold-dark shadow-lg hover:opacity-95 transition cursor-pointer">
+                <button type="submit" id="rsvp-submit-btn" class="w-full py-4 font-cinzel text-sm uppercase tracking-widest text-stone-900 font-bold rounded-xl bg-gradient-to-r from-gold-light via-gold to-gold-dark shadow-lg hover:scale-[1.01] active:scale-[0.99] transition cursor-pointer">
                     Kirim Konfirmasi & Ucapan
                 </button>
-                <a id="rsvp-wa-btn" href="#" target="_blank" class="w-full py-4 font-cinzel text-sm uppercase tracking-widest text-emerald-400 border border-emerald-500/30 font-bold rounded-lg bg-emerald-950/20 shadow-lg hover:bg-emerald-500 hover:text-stone-950 transition cursor-pointer hidden text-center flex items-center justify-center">
-                    <i class="fa-brands fa-whatsapp mr-2 text-lg"></i> Kirim via WhatsApp
+                <a id="rsvp-wa-btn" href="#" target="_blank" class="w-full py-4 font-cinzel text-sm uppercase tracking-widest text-emerald-800 border border-emerald-500/40 font-bold rounded-xl bg-emerald-50 shadow-md hover:bg-emerald-600 hover:text-white transition cursor-pointer hidden text-center flex items-center justify-center">
+                    <i class="fa-brands fa-whatsapp mr-2 text-lg text-emerald-600"></i> Kirim via WhatsApp
                 </a>
             </div>
         </form>
 
         <!-- Wishes Stream Container -->
-        <div class="bg-stone-950/80 p-8 rounded-2xl border border-gold/30 shadow-2xl">
-            <h3 class="font-cinzel text-lg text-gold mb-6 border-b border-stone-800 pb-3 flex items-center justify-between">
+        <div class="bg-white/95 backdrop-blur-sm p-8 sm:p-10 rounded-3xl border border-[#bfa254]/50 shadow-xl text-stone-800">
+            <h3 class="font-cinzel text-lg font-bold text-[#6b470c] mb-6 border-b border-stone-200 pb-3 flex items-center justify-between">
                 <span>Daftar Ucapan Tamu</span>
-                <span id="wishes-count" class="text-xs bg-gold/10 text-gold px-3 py-1 rounded-full border border-gold/30">0 Ucapan</span>
+                <span id="wishes-count" class="text-xs bg-[#bfa254]/15 text-[#6b470c] font-bold px-3 py-1 rounded-full border border-[#bfa254]/40">0 Ucapan</span>
             </h3>
             <div id="wishes-list" class="space-y-4 max-h-96 overflow-y-auto pr-2">
                 <!-- Comments rendered by JS -->
@@ -124,26 +124,26 @@ const { settings } = Astro.props;
 
         list.innerHTML = wishes.map(wish => {
             const badgeClass = wish.status === 'Hadir' 
-                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
-                : 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-300 font-medium' 
+                : 'bg-amber-50 text-amber-700 border-amber-300 font-medium';
 
             const timeVal = wish.created_at ? new Date(wish.created_at).getTime() : Date.now();
             // Determine if this wish has already been liked by this browser
             const liked = localStorage.getItem(`liked_${wish.id}`) === 'true';
 
             return `
-                <div class="bg-stone-900/80 p-4 rounded-xl border border-stone-800 flex flex-col justify-between">
+                <div class="bg-stone-50/90 p-4 rounded-2xl border border-stone-200/90 shadow-sm flex flex-col justify-between">
                     <div>
-                        <div class="flex items-center justify-between mb-1">
-                            <h4 class="font-bold text-gold text-sm">${escapeHTML(wish.name)}</h4>
-                            <span class="text-[10px] ${badgeClass} px-2 py-0.5 rounded border">${wish.status}</span>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <h4 class="font-bold text-[#6b470c] text-sm">${escapeHTML(wish.name)}</h4>
+                            <span class="text-[10px] ${badgeClass} px-2 py-0.5 rounded-full border">${wish.status}</span>
                         </div>
-                        <p class="text-stone-300 text-xs leading-relaxed mb-1">${escapeHTML(wish.message)}</p>
+                        <p class="text-stone-700 text-xs leading-relaxed mb-1">${escapeHTML(wish.message)}</p>
                     </div>
-                    <div class="flex items-center justify-between mt-3 pt-2 border-t border-stone-800/40">
+                    <div class="flex items-center justify-between mt-3 pt-2.5 border-t border-stone-200/80">
                         <span class="text-[10px] text-stone-500">${getRelativeTime(timeVal)}</span>
                         <button class="like-btn flex items-center gap-1.5 ${liked ? 'text-rose-500' : 'text-stone-400'} hover:text-rose-500 text-xs font-cinzel transition cursor-pointer" data-id="${wish.id}" data-liked="${liked}">
-                            <i class="fa-solid fa-heart text-[10px] ${liked ? 'text-rose-500' : 'text-stone-500'} hover:text-rose-500 transition-colors"></i>
+                            <i class="fa-solid fa-heart text-[10px] ${liked ? 'text-rose-500' : 'text-stone-400'} hover:text-rose-500 transition-colors"></i>
                             <span>${wish.likes || 0}</span>
                         </button>
                     </div>

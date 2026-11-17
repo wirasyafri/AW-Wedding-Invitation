@@ -33,29 +33,29 @@ const bgZoom = getUrlZoom(heroBg);
     <div class="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/70 to-stone-950/40"></div>
     
     <div class="relative z-10 max-w-3xl mx-auto py-20 text-stone-100 reveal">
-        <span class="inline-block font-cinzel uppercase tracking-[0.4em] text-xs md:text-sm text-gold bg-stone-950/60 px-6 py-2 rounded-full border border-gold/40 mb-6 backdrop-blur-sm">
+        <span class="inline-block font-cinzel uppercase tracking-[0.4em] text-xs md:text-sm text-[#382504] font-bold bg-[#95a371]/90 px-6 py-2.5 rounded-full border border-[#bfa254]/70 mb-6 backdrop-blur-md shadow-lg">
             Pernikahan Suci
         </span>
         <h1 class="font-script text-6xl md:text-8xl text-gold-light mb-6 drop-shadow-md">{settings.groom_name_short} & {settings.bride_name_short}</h1>
         <p class="font-cinzel text-lg md:text-xl tracking-widest text-stone-300 mb-8">{settings.akad_date}</p>
         
         <!-- Countdown Timer -->
-        <div id="countdown-timer" class="grid grid-cols-4 gap-3 max-w-md mx-auto mb-10 bg-stone-900/80 p-4 rounded-xl border border-gold/30 backdrop-blur-md" data-target-date={settings.countdown_target_date}>
-            <div class="text-center">
-                <span id="days" class="font-cinzel text-2xl md:text-3xl font-bold text-gold block">00</span>
-                <span class="text-[10px] uppercase tracking-wider text-stone-400">Hari</span>
+        <div id="countdown-timer" class="grid grid-cols-4 gap-3 max-w-md mx-auto mb-10 bg-[#95a371]/90 p-4 rounded-2xl border border-[#bfa254]/60 backdrop-blur-md shadow-2xl" data-target-date={settings.countdown_target_date}>
+            <div class="text-center bg-white/35 rounded-xl py-2.5 px-1 border border-white/20 shadow-sm">
+                <span id="days" class="font-cinzel text-2xl md:text-3xl font-extrabold text-[#3e2905] block">00</span>
+                <span class="text-[10px] uppercase tracking-wider text-[#453008] font-bold">Hari</span>
             </div>
-            <div class="text-center">
-                <span id="hours" class="font-cinzel text-2xl md:text-3xl font-bold text-gold block">00</span>
-                <span class="text-[10px] uppercase tracking-wider text-stone-400">Jam</span>
+            <div class="text-center bg-white/35 rounded-xl py-2.5 px-1 border border-white/20 shadow-sm">
+                <span id="hours" class="font-cinzel text-2xl md:text-3xl font-extrabold text-[#3e2905] block">00</span>
+                <span class="text-[10px] uppercase tracking-wider text-[#453008] font-bold">Jam</span>
             </div>
-            <div class="text-center">
-                <span id="minutes" class="font-cinzel text-2xl md:text-3xl font-bold text-gold block">00</span>
-                <span class="text-[10px] uppercase tracking-wider text-stone-400">Menit</span>
+            <div class="text-center bg-white/35 rounded-xl py-2.5 px-1 border border-white/20 shadow-sm">
+                <span id="minutes" class="font-cinzel text-2xl md:text-3xl font-extrabold text-[#3e2905] block">00</span>
+                <span class="text-[10px] uppercase tracking-wider text-[#453008] font-bold">Menit</span>
             </div>
-            <div class="text-center">
-                <span id="seconds" class="font-cinzel text-2xl md:text-3xl font-bold text-gold block">00</span>
-                <span class="text-[10px] uppercase tracking-wider text-stone-400">Detik</span>
+            <div class="text-center bg-white/35 rounded-xl py-2.5 px-1 border border-white/20 shadow-sm">
+                <span id="seconds" class="font-cinzel text-2xl md:text-3xl font-extrabold text-[#3e2905] block">00</span>
+                <span class="text-[10px] uppercase tracking-wider text-[#453008] font-bold">Detik</span>
             </div>
         </div>
 
